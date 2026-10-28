@@ -38,6 +38,7 @@ export default function Dashboard({ session }) {
   const allNav = [
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'accounts', label: 'Accounts' },
+    { id: 'prospects', label: 'Prospects' },
     { id: 'providers', label: 'Providers' },
     { id: 'expenses', label: 'Expenses' },
     { id: 'reports', label: 'Reports' },
@@ -80,6 +81,7 @@ export default function Dashboard({ session }) {
         </div>
         
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} />}
+        {page === 'prospects' && <Prospects clinics={clinics} onRefresh={loadData} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
@@ -180,6 +182,80 @@ function DashboardHome({ clinics, expenses, providers }) {
             </div>
           ))}
         </div>
+      </div>
+    </div>
+  )
+}
+
+
+function Prospects({ clinics, onRefresh }) {
+  const [showAdd, setShowAdd] = useState(false)
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', stage: 'Cold' })
+  const prospects = clinics.filter(c => c.is_prospect)
+
+  async function addProspect() {
+    if (!form.name.trim()) return
+    await supabase.from('clinics').insert({ ...form, is_prospect: true })
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', stage: 'Cold' })
+    setShowAdd(false)
+    onRefresh()
+  }
+
+  async function convertToAccount(id) {
+    await supabase.from('clinics').update({ is_prospect: false }).eq('id', id)
+    onRefresh()
+    alert('Converted to Account! Rep will be notified.')
+  }
+
+  async function updateStage(id, stage) {
+    await supabase.from('clinics').update({ stage }).eq('id', id)
+    onRefresh()
+  }
+
+  const stageColor = { Cold: '#6b7280', Warm: '#f59e0b', HOT: '#ef4444' }
+
+  return (
+    <div>
+      <button className="btn" onClick={() => setShowAdd(!showAdd)} style={{ marginBottom: 16 }}>+ Add Prospect</button>
+      {showAdd && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginBottom: 12 }}>New Prospect</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
+            <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option>
+            </select>
+            <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
+            <input value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" />
+            <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
+            <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
+              <option>Cold</option><option>Warm</option><option>HOT</option>
+            </select>
+          </div>
+          <button className="btn" onClick={addProspect}>Save Prospect</button>
+          <button className="btn secondary" onClick={() => setShowAdd(false)} style={{ marginLeft: 8 }}>Cancel</button>
+        </div>
+      )}
+      <div className="card">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>City</th><th>Stage</th><th>Actions</th></tr></thead>
+          <tbody>
+            {prospects.map(p => (
+              <tr key={p.id}>
+                <td>{p.name}</td>
+                <td>{p.type || '—'}</td>
+                <td>{p.city || '—'}</td>
+                <td>
+                  <select value={p.stage || 'Cold'} onChange={e => updateStage(p.id, e.target.value)} style={{ background: stageColor[p.stage] || '#6b7280', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4 }}>
+                    <option>Cold</option><option>Warm</option><option>HOT</option>
+                  </select>
+                </td>
+                <td><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => convertToAccount(p.id)}>Convert to Account</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!prospects.length && <p style={{ color: '#6b7280', padding: 12 }}>No prospects yet.</p>}
       </div>
     </div>
   )
