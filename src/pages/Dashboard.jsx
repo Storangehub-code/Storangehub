@@ -190,13 +190,22 @@ function DashboardHome({ clinics, expenses, providers }) {
 
 function Prospects({ clinics, onRefresh }) {
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', stage: 'Cold' })
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
+  const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const prospects = clinics.filter(c => c.is_prospect)
 
   async function addProspect() {
     if (!form.name.trim()) return
-    await supabase.from('clinics').insert({ ...form, is_prospect: true })
-    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', stage: 'Cold' })
+    const { data: clinic } = await supabase.from('clinics').insert({ ...form, is_prospect: true }).select().single()
+    if (clinic) {
+      for (const p of providers) {
+        if (p.name.trim()) {
+          await supabase.from('providers').insert({ ...p, clinic_id: clinic.id })
+        }
+      }
+    }
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
+    setProviders([{ name: '', title: 'MD', npi: '' }])
     setShowAdd(false)
     onRefresh()
   }
@@ -223,15 +232,29 @@ function Prospects({ clinics, onRefresh }) {
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
             </select>
+            <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" style={{ gridColumn: 'span 2' }} />
             <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
             <input value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" />
             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
+            <input value={form.fax} onChange={e => setForm({...form, fax: e.target.value})} placeholder="Fax" />
+            <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
+            <input value={form.emr} onChange={e => setForm({...form, emr: e.target.value})} placeholder="EMR system" />
             <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
               <option>Cold</option><option>Warm</option><option>HOT</option>
             </select>
           </div>
+          <h4 style={{ marginBottom: 8 }}>Providers</h4>
+          {providers.map((p, i) => (
+            <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr auto', gap: 8, marginBottom: 8 }}>
+              <input value={p.name} onChange={e => { const n = [...providers]; n[i].name = e.target.value; setProviders(n) }} placeholder="Name" />
+              <select value={p.title} onChange={e => { const n = [...providers]; n[i].title = e.target.value; setProviders(n) }}><option>MD</option><option>DO</option><option>NP</option><option>PA</option><option>DPM</option></select>
+              <input value={p.npi} onChange={e => { const n = [...providers]; n[i].npi = e.target.value; setProviders(n) }} placeholder="NPI" />
+              <button className="btn secondary" onClick={() => setProviders(providers.filter((_, j) => j !== i))} style={{ padding: '8px 12px' }}>−</button>
+            </div>
+          ))}
+          <button className="btn secondary" onClick={() => setProviders([...providers, { name: '', title: 'MD', npi: '' }])} style={{ marginBottom: 12 }}>+ Add Provider</button>
           <button className="btn" onClick={addProspect}>Save Prospect</button>
           <button className="btn secondary" onClick={() => setShowAdd(false)} style={{ marginLeft: 8 }}>Cancel</button>
         </div>
