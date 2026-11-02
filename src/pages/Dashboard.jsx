@@ -405,16 +405,16 @@ Supplies Requested:
           <thead><tr><th>Name</th><th>Type</th><th>City</th><th>Stage</th><th>Actions</th></tr></thead>
           <tbody>
             {prospects.map(p => (
-              <tr key={p.id}>
-                <td>{p.name}</td>
+              <tr key={p.id} onClick={() => onSelect(p)} style={{ cursor: 'pointer' }}>
+                <td style={{ color: '#14b8a6' }}>{p.name}</td>
                 <td>{p.type || '—'}</td>
                 <td>{p.city || '—'}</td>
-                <td>
+                <td onClick={e => e.stopPropagation()}>
                   <select value={p.stage || 'Cold'} onChange={e => updateStage(p.id, e.target.value)} style={{ background: stageColor[p.stage] || '#6b7280', color: 'white', border: 'none', padding: '4px 8px', borderRadius: 4 }}>
                     <option>Cold</option><option>Warm</option><option>HOT</option>
                   </select>
                 </td>
-                <td><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setOrdering(p)}>Ready to Order</button></td>
+                <td onClick={e => e.stopPropagation()}><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setOrdering(p)}>Ready to Order</button></td>
               </tr>
             ))}
           </tbody>
