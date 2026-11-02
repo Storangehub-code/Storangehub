@@ -250,7 +250,7 @@ Supplies Requested:
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'spudwow@gmail.com',
+          to: 'spud.w.mann@gmail.com',
           subject: 'New Order Request: ' + ordering.name,
           text: orderDetails
         })
