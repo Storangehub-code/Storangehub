@@ -543,7 +543,7 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
         {!isProspect && <button className="btn secondary">Requisition Form ▾</button>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
-        {['info', 'providers', 'activity'].map(t => (
+        {['info', 'providers', 'activity', 'tests'].map(t => (
           <button key={t} className={tab === t ? 'btn' : 'btn secondary'} onClick={() => setTab(t)} style={{ textTransform: 'capitalize' }}>{t}</button>
         ))}
       </div>
@@ -603,6 +603,12 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
           <div style={{ whiteSpace: 'pre-wrap', color: '#9ca3af', fontSize: 14 }}>
             {clinic.notes || 'No activity yet.'}
           </div>
+        </div>
+      )}
+      {tab === 'tests' && (
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Tests</h3>
+          <p style={{ color: '#6b7280' }}>No tests for this account yet.</p>
         </div>
       )}
       {showFollowup && (
