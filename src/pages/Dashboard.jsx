@@ -39,6 +39,7 @@ export default function Dashboard({ session }) {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'accounts', label: 'Accounts' },
     { id: 'prospects', label: 'Prospects' },
+    ...(role === 'global_admin' ? [{ id: 'approve', label: 'Approve Accounts' }] : []),
     { id: 'providers', label: 'Providers' },
     { id: 'expenses', label: 'Expenses' },
     { id: 'reports', label: 'Reports' },
@@ -81,6 +82,7 @@ export default function Dashboard({ session }) {
         </div>
         
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} />}
+        {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && <Prospects clinics={clinics} onRefresh={loadData} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
@@ -188,6 +190,71 @@ function DashboardHome({ clinics, expenses, providers }) {
 }
 
 
+
+function ApproveAccounts({ clinics, onRefresh }) {
+  const pending = clinics.filter(c => c.is_prospect && c.stage === 'Pending')
+  const [selected, setSelected] = useState(null)
+  const [form, setForm] = useState({ supplyUrl: '', pickupUrl: '' })
+
+  async function approve() {
+    if (!selected) return
+    await supabase.from('clinics').update({ 
+      is_prospect: false, 
+      stage: 'Active',
+      supply_url: form.supplyUrl,
+      pickup_url: form.pickupUrl
+    }).eq('id', selected.id)
+    setSelected(null)
+    setForm({ supplyUrl: '', pickupUrl: '' })
+    onRefresh()
+    alert('Account approved!')
+  }
+
+  if (selected) {
+    return (
+      <div className="card">
+        <h3 style={{ marginBottom: 16 }}>Approve: {selected.name}</h3>
+        <div style={{ marginBottom: 12 }}>
+          <label>Custom Supply URL</label>
+          <input value={form.supplyUrl} onChange={e => setForm({...form, supplyUrl: e.target.value})} placeholder="https://..." style={{ width: '100%', marginTop: 4 }} />
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label>Custom Pickup URL</label>
+          <input value={form.pickupUrl} onChange={e => setForm({...form, pickupUrl: e.target.value})} placeholder="https://..." style={{ width: '100%', marginTop: 4 }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label>Upload Requisition (PDF)</label>
+          <input type="file" accept=".pdf" style={{ display: 'block', marginTop: 4 }} />
+        </div>
+        <button className="btn" onClick={approve}>Approve Account</button>
+        <button className="btn secondary" onClick={() => setSelected(null)} style={{ marginLeft: 8 }}>Cancel</button>
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      <h2 style={{ marginBottom: 16 }}>Pending Approvals</h2>
+      <div className="card">
+        <table>
+          <thead><tr><th>Name</th><th>Type</th><th>City</th><th>Actions</th></tr></thead>
+          <tbody>
+            {pending.map(p => (
+              <tr key={p.id}>
+                <td>{p.name}</td>
+                <td>{p.type || '—'}</td>
+                <td>{p.city || '—'}</td>
+                <td><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setSelected(p)}>Review</button></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!pending.length && <p style={{ color: '#6b7280', padding: 12 }}>No pending approvals.</p>}
+      </div>
+    </div>
+  )
+}
+
 function Prospects({ clinics, onRefresh }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
@@ -227,7 +294,7 @@ function Prospects({ clinics, onRefresh }) {
 
   async function submitOrder() {
     if (!ordering) return
-    await supabase.from('clinics').update({ is_prospect: false }).eq('id', ordering.id)
+    await supabase.from('clinics').update({ stage: 'Pending' }).eq('id', ordering.id)
     
     const orderDetails = `
 Clinic: ${ordering.name}
@@ -257,7 +324,7 @@ Supplies Requested:
       })
     } catch (e) { console.log('Email error', e) }
     
-    alert('Order submitted! Team notified. Confirmation will be sent.')
+    alert('Order submitted! Pending Global Admin approval.')
     setOrdering(null)
     onRefresh()
   }
