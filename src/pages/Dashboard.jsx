@@ -491,6 +491,8 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
   const [prov, setProv] = useState({ name: '', title: 'MD', npi: '', email: '', phone: '' })
   const [note, setNote] = useState('')
   const [activityType, setActivityType] = useState('Note')
+  const [showFollowup, setShowFollowup] = useState(false)
+  const [followup, setFollowup] = useState({ date: '', time: '', type: 'Call', warn: '1 day' })
 
   async function addProvider() {
     if (!prov.name.trim()) return
@@ -509,13 +511,7 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
     setNote('')
     onRefresh()
     clinic.notes = updated
-    if (confirm('Schedule a follow-up?')) {
-      const date = prompt('Follow-up date (YYYY-MM-DD):')
-      const type = prompt('Follow-up type (Call, Visit, Email, Meeting):') || 'Call'
-      if (date) {
-        alert('Follow-up scheduled for ' + date + ' (' + type + ')')
-      }
-    }
+    setShowFollowup(true)
   }
 
   return (
@@ -581,6 +577,35 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
           </div>
           <div style={{ whiteSpace: 'pre-wrap', color: '#9ca3af', fontSize: 14 }}>
             {clinic.notes || 'No activity yet.'}
+          </div>
+        </div>
+      )}
+      {showFollowup && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }}>
+          <div className="card" style={{ width: 400, padding: 24 }}>
+            <h3 style={{ marginBottom: 16 }}>Schedule Follow-up</h3>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Date</label>
+              <input type="date" value={followup.date} onChange={e => setFollowup({...followup, date: e.target.value})} style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Time</label>
+              <input type="time" value={followup.time} onChange={e => setFollowup({...followup, time: e.target.value})} style={{ width: '100%' }} />
+            </div>
+            <div style={{ marginBottom: 12 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Type</label>
+              <select value={followup.type} onChange={e => setFollowup({...followup, type: e.target.value})} style={{ width: '100%' }}>
+                <option>Call</option><option>Visit</option><option>Email</option><option>Meeting</option>
+              </select>
+            </div>
+            <div style={{ marginBottom: 16 }}>
+              <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Remind me</label>
+              <select value={followup.warn} onChange={e => setFollowup({...followup, warn: e.target.value})} style={{ width: '100%' }}>
+                <option>15 minutes</option><option>1 hour</option><option>1 day</option>
+              </select>
+            </div>
+            <button className="btn" onClick={() => { alert('Follow-up scheduled!'); setShowFollowup(false) }}>Save</button>
+            <button className="btn secondary" onClick={() => setShowFollowup(false)} style={{ marginLeft: 8 }}>Cancel</button>
           </div>
         </div>
       )}
