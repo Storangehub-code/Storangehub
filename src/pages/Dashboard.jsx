@@ -936,11 +936,15 @@ function Followups({ clinics }) {
           <h3 style={{ marginBottom: 12 }}>{monthName}</h3>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }}>
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} style={{ color: '#6b7280', padding: 4 }}>{d}</div>)}
-            {days.map((d, i) => (
-              <div key={i} onClick={() => d && setSelectedDate(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : 'transparent' }}>
-                {d || ''}
-              </div>
-            ))}
+            {days.map((d, i) => {
+              const dayFollowups = d ? followups.filter(f => new Date(f.date).getDate() === d) : []
+              return (
+                <div key={i} onClick={() => d && setSelectedDate(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
+                  {d || ''}
+                  {dayFollowups.length > 0 && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 10, color: '#14b8a6' }}>{dayFollowups.length}</span>}
+                </div>
+              )
+            })}
           </div>
         </div>
         <div className="card">
