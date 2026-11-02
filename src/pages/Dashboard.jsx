@@ -56,7 +56,7 @@ export default function Dashboard({ session }) {
     <div style={{ display: 'flex', minHeight: '100vh' }}>
       <div style={{ width: 220, background: '#111827', padding: '20px 12px', borderRight: '1px solid #1f2937' }}>
         <div style={{ padding: '0 12px', marginBottom: 8 }}>
-          <h2 style={{ fontSize: 18, fontWeight: 600 }}>Response DX</h2>
+          <img src="/logo.png" alt="Response DX" style={{ height: 40, marginBottom: 4 }} />
         </div>
         <div style={{ padding: '4px 12px', marginBottom: 16 }}>
           <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
