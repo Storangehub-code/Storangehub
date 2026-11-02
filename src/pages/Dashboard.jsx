@@ -509,6 +509,13 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
     setNote('')
     onRefresh()
     clinic.notes = updated
+    if (confirm('Schedule a follow-up?')) {
+      const date = prompt('Follow-up date (YYYY-MM-DD):')
+      const type = prompt('Follow-up type (Call, Visit, Email, Meeting):') || 'Call'
+      if (date) {
+        alert('Follow-up scheduled for ' + date + ' (' + type + ')')
+      }
+    }
   }
 
   return (
