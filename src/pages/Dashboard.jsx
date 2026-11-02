@@ -84,7 +84,8 @@ export default function Dashboard({ session }) {
         
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
-        {page === 'prospects' && <Prospects clinics={clinics} onRefresh={loadData} />}
+        {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
+        {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
@@ -256,7 +257,7 @@ function ApproveAccounts({ clinics, onRefresh }) {
   )
 }
 
-function Prospects({ clinics, onRefresh }) {
+function Prospects({ clinics, onRefresh, onSelect }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
@@ -485,7 +486,7 @@ function Accounts({ clinics, onRefresh, onSelect }) {
   )
 }
 
-function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }) {
+function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, isProspect }) {
   const [showAdd, setShowAdd] = useState(false)
   const [tab, setTab] = useState('info')
   const [prov, setProv] = useState({ name: '', title: 'MD', npi: '', email: '', phone: '' })
@@ -518,8 +519,8 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
-        <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>
-        <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>
+        {!isProspect && <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>}
+        {!isProspect && <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>}
         <a href={'https://www.google.com/maps/search/catering+near+' + encodeURIComponent(clinic.address || clinic.city || '')} target="_blank" rel="noreferrer" className="btn">Find Catering</a>
         <button className="btn secondary">Requisition Form ▾</button>
       </div>
