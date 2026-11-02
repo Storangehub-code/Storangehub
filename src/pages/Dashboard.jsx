@@ -905,6 +905,7 @@ function Followups({ clinics }) {
     setShowAdd(false)
   }
 
+  const today = new Date()
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate()
   const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay()
   const days = []
