@@ -828,19 +828,28 @@ function Notifications({ items }) {
 }
 
 function Followups({ clinics }) {
-  const [items, setItems] = useState([])
+  const [followups, setFollowups] = useState([])
   const [showAdd, setShowAdd] = useState(false)
+  const [selectedDate, setSelectedDate] = useState(null)
   const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
 
   function addFollowup() {
     if (!form.date) return
     const clinic = clinics.find(c => c.id === form.clinic_id)
-    setItems([...items, { ...form, id: Date.now(), clinicName: clinic?.name || 'General' }])
+    setFollowups([...followups, { ...form, id: Date.now(), clinicName: clinic?.name || 'General' }])
     setForm({ clinic_id: '', date: '', type: 'Call', notes: '' })
     setShowAdd(false)
   }
 
-  const sorted = [...items].sort((a, b) => a.date.localeCompare(b.date))
+  const today = new Date()
+  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
+  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay()
+  const days = []
+  for (let i = 0; i < firstDay; i++) days.push(null)
+  for (let i = 1; i <= daysInMonth; i++) days.push(i)
+
+  const monthName = today.toLocaleString('default', { month: 'long', year: 'numeric' })
+  const upcoming = [...followups].sort((a, b) => a.date.localeCompare(b.date))
 
   return (
     <div>
@@ -861,18 +870,31 @@ function Followups({ clinics }) {
           <button className="btn" onClick={addFollowup}>Save</button>
         </div>
       )}
-      <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
-        {sorted.map(f => (
-          <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-            <div>
-              <strong>{f.clinicName}</strong> · {f.type}
-              {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
-            </div>
-            <span style={{ color: '#14b8a6' }}>{f.date}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>{monthName}</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }}>
+            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} style={{ color: '#6b7280', padding: 4 }}>{d}</div>)}
+            {days.map((d, i) => (
+              <div key={i} onClick={() => d && setSelectedDate(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : 'transparent' }}>
+                {d || ''}
+              </div>
+            ))}
           </div>
-        ))}
-        {!sorted.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled.</p>}
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
+          {upcoming.map(f => (
+            <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
+              <div>
+                <strong>{f.clinicName}</strong> · {f.type}
+                {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
+              </div>
+              <span style={{ color: '#14b8a6' }}>{f.date}</span>
+            </div>
+          ))}
+          {!upcoming.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled.</p>}
+        </div>
       </div>
     </div>
   )
