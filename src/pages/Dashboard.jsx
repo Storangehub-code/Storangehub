@@ -467,23 +467,20 @@ function Accounts({ clinics, onRefresh, onSelect }) {
           <button className="btn secondary" onClick={() => setShowAdd(false)} style={{ marginLeft: 8 }}>Cancel</button>
         </div>
       )}
-      <div className="card">
-        <table>
-          <thead><tr><th>Name</th><th>Type</th><th>City</th><th>Phone</th><th>Status</th></tr></thead>
-          <tbody>
-            {filtered.map(c => (
-              <tr key={c.id} onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', background: routeAccounts.includes(c.id) ? '#1e3a3a' : 'transparent' }}>
-                <td style={{ color: '#14b8a6' }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</td>
-                <td>{c.type || '—'}</td>
-                <td>{c.city || '—'}</td>
-                <td>{c.phone || '—'}</td>
-                <td><span className="badge" style={{ background: (c.total_tests || 0) > 0 ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(c.total_tests || 0) > 0 ? 'Active' : 'Inactive'}</span></td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-        {!filtered.length && <p style={{ color: '#6b7280', padding: 12 }}>No accounts found.</p>}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
+        {filtered.map(c => (
+          <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: routeAccounts.includes(c.id) ? '2px solid #14b8a6' : '1px solid #1f2937' }}>
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
+              <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
+              <span className="badge" style={{ background: (c.total_tests || 0) > 0 ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(c.total_tests || 0) > 0 ? 'Active' : 'Inactive'}</span>
+            </div>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.type || '—'}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.phone || '—'}</p>
+          </div>
+        ))}
       </div>
+      {!filtered.length && <p style={{ color: '#6b7280', padding: 12 }}>No accounts found.</p>}
     </div>
   )
 }
