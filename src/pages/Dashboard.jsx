@@ -614,7 +614,18 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
                 <option>15 minutes</option><option>1 hour</option><option>1 day</option>
               </select>
             </div>
-            <button className="btn" onClick={() => { alert('Follow-up scheduled!'); setShowFollowup(false) }}>Save</button>
+            <button className="btn" onClick={async () => {
+                const timeStr = followup.hour + ':' + followup.minute + ' ' + followup.ampm
+                await supabase.from('followups').insert({
+                  clinic_id: clinic.id,
+                  date: followup.date,
+                  time: timeStr,
+                  type: followup.type,
+                  notes: 'Reminder: ' + followup.warn
+                })
+                alert('Follow-up scheduled!')
+                setShowFollowup(false)
+              }}>Save</button>
             <button className="btn secondary" onClick={() => setShowFollowup(false)} style={{ marginLeft: 8 }}>Cancel</button>
           </div>
         </div>
@@ -872,6 +883,12 @@ function Notifications({ items }) {
 function Followups({ clinics }) {
   const [followups, setFollowups] = useState([])
   const [showAdd, setShowAdd] = useState(false)
+  
+  useEffect(() => {
+    supabase.from('followups').select('*, clinics(name)').order('date').then(({ data }) => {
+      setFollowups(data || [])
+    })
+  }, [])
   const [selectedDate, setSelectedDate] = useState(null)
   const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
 
@@ -929,7 +946,7 @@ function Followups({ clinics }) {
           {upcoming.map(f => (
             <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
               <div>
-                <strong>{f.clinicName}</strong> · {f.type}
+                <strong>{f.clinics?.name || 'General'}</strong> · {f.type}
                 {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
               </div>
               <span style={{ color: '#14b8a6' }}>{f.date}</span>
