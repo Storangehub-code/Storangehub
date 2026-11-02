@@ -249,7 +249,7 @@ Supplies Requested:
       await fetch('https://api.resend.com/emails', {
         method: 'POST',
         headers: {
-          'Authorization': 'Bearer re_7eKR9y5i_34GBScgTpYVrSZQ5J1ZkAJ9B',
+          'Authorization': 'Bearer ' + import.meta.env.VITE_RESEND_KEY,
           'Content-Type': 'application/json'
         },
         body: JSON.stringify({
