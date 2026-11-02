@@ -927,23 +927,7 @@ function Followups({ clinics }) {
 
   return (
     <div>
-      <button className="btn" onClick={() => setShowAdd(!showAdd)} style={{ marginBottom: 16 }}>+ Schedule Follow-up</button>
-      {showAdd && (
-        <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
-            <select value={form.clinic_id} onChange={e => setForm({...form, clinic_id: e.target.value})}>
-              <option value="">Select account (optional)</option>
-              {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
-            <input type="date" value={form.date} onChange={e => setForm({...form, date: e.target.value})} />
-            <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Call</option><option>Visit</option><option>Email</option><option>Meeting</option>
-            </select>
-            <input value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Notes" />
-          </div>
-          <button className="btn" onClick={addFollowup}>Save</button>
-        </div>
-      )}
+      
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
@@ -971,7 +955,7 @@ function Followups({ clinics }) {
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
           {upcoming.map(f => (
-            <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+            <div key={f.id} onClick={() => setViewingDay(new Date(f.date).getDate())} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
               <div>
                 <strong>{f.clinics?.name || 'General'}</strong> · {f.type}
                 {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
