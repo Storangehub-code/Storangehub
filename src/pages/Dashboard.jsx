@@ -908,9 +908,19 @@ function Followups({ clinics }) {
   const today = new Date()
   const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate()
   const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay()
-  const days = []
-  for (let i = 0; i < firstDay; i++) days.push(null)
-  for (let i = 1; i <= daysInMonth; i++) days.push(i)
+  let days = []
+  if (viewMode === 'week') {
+    const startOfWeek = new Date(today)
+    startOfWeek.setDate(today.getDate() - today.getDay())
+    for (let i = 0; i < 7; i++) {
+      const d = new Date(startOfWeek)
+      d.setDate(startOfWeek.getDate() + i)
+      days.push(d.getDate())
+    }
+  } else {
+    for (let i = 0; i < firstDay; i++) days.push(null)
+    for (let i = 1; i <= daysInMonth; i++) days.push(i)
+  }
 
   const monthName = today.toLocaleString('default', { month: 'long', year: 'numeric' })
   const upcoming = [...followups].sort((a, b) => a.date.localeCompare(b.date))
