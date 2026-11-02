@@ -17,7 +17,8 @@ export default function Dashboard({ session }) {
   useEffect(() => { if (profile) loadData() }, [profile])
 
   async function loadProfile() {
-    const { data } = await supabase.from('profiles').select('*').eq('id', session.user.id).single()
+    const { data, error } = await supabase.from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
+    console.log('Profile load:', data, error)
     setProfile(data || { role: 'rep', full_name: session.user.email })
   }
 
