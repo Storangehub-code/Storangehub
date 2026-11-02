@@ -192,6 +192,19 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
           ))}
         </div>
       </div>
+      <div className="card" style={{ marginTop: 16 }}>
+        <h3 style={{ marginBottom: 12 }}>Recent Tests</h3>
+        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
+          {(tests || []).slice(0, 10).map(t => (
+            <div key={t.id} style={{ minWidth: 200, padding: 12, background: '#0f172a', borderRadius: 8, flexShrink: 0 }}>
+              <div style={{ fontWeight: 600, fontSize: 13 }}>{t.clinics?.name || 'Unknown'}</div>
+              <div style={{ color: '#14b8a6', fontSize: 12 }}>{t.test_type || 'Test'}</div>
+              <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 4 }}>{t.collected || '—'}</div>
+            </div>
+          ))}
+          {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests yet.</p>}
+        </div>
+      </div>
     </div>
   )
 }
