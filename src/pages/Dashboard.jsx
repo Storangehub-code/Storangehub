@@ -771,14 +771,29 @@ function Providers({ providers, onSelect }) {
 
 function Expenses({ expenses, clinics, onRefresh, role }) {
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '' })
+  const [form, setForm] = useState({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '', isNew: false, newClinic: { name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' }, providers: [{ name: '', title: 'MD', npi: '' }] })
   const canApprove = role === 'manager' || role === 'global_admin'
   const total = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
 
   async function addExpense() {
     if (!form.amount) return
-    await supabase.from('expenses').insert({ ...form, status: 'Ready' })
-    setForm({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '' })
+    let clinicId = form.clinic_id
+    if (form.isNew && form.newClinic.name) {
+      const { data: clinic } = await supabase.from('clinics').insert({ ...form.newClinic, is_prospect: true }).select().single()
+      if (clinic) {
+        clinicId = clinic.id
+        for (const p of form.providers) {
+          if (p.name.trim()) {
+            await supabase.from('providers').insert({ ...p, clinic_id: clinic.id })
+          }
+        }
+        if (confirm('Save as a new Prospect?')) {
+          alert('Prospect saved!')
+        }
+      }
+    }
+    await supabase.from('expenses').insert({ business: form.business, amount: form.amount, expense_date: form.expense_date, exp_type: form.exp_type, notes: form.notes, city: form.city, clinic_id: clinicId || null, status: 'Ready' })
+    setForm({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '', isNew: false, newClinic: { name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' }, providers: [{ name: '', title: 'MD', npi: '' }] })
     setShowAdd(false)
     onRefresh()
   }
@@ -805,10 +820,43 @@ function Expenses({ expenses, clinics, onRefresh, role }) {
             <select value={form.exp_type} onChange={e => setForm({...form, exp_type: e.target.value})}>
               <option>Meals</option><option>REP EXP</option><option>Travel</option><option>Lodging</option><option>Auto expense</option><option>Office supplies</option><option>Marketing</option><option>Other</option>
             </select>
-            <select value={form.clinic_id} onChange={e => setForm({...form, clinic_id: e.target.value || null})}>
-              <option value="">Link to account (optional)</option>
-              {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
-            </select>
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: 13, color: '#9ca3af' }}>Account</label>
+              <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
+                <select value={form.isNew ? 'new' : form.clinic_id} onChange={e => setForm({...form, isNew: e.target.value === 'new', clinic_id: e.target.value === 'new' ? '' : e.target.value})} style={{ flex: 1 }}>
+                  <option value="">Select existing (optional)</option>
+                  <option value="new">+ New Clinic</option>
+                  {clinics.map(c => <option key={c.id} value={c.id}>{c.name}</option>)}
+                </select>
+              </div>
+            </div>
+            {form.isNew && (
+              <div style={{ gridColumn: 'span 2', padding: 12, background: '#0f172a', borderRadius: 8, marginTop: 8 }}>
+                <h4 style={{ marginBottom: 8 }}>New Clinic</h4>
+                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8 }}>
+                  <input value={form.newClinic.name} onChange={e => setForm({...form, newClinic: {...form.newClinic, name: e.target.value}})} placeholder="Clinic name *" />
+                  <select value={form.newClinic.type} onChange={e => setForm({...form, newClinic: {...form.newClinic, type: e.target.value}})}>
+                    <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option>
+                  </select>
+                  <input value={form.newClinic.address} onChange={e => setForm({...form, newClinic: {...form.newClinic, address: e.target.value}})} placeholder="Address" style={{ gridColumn: 'span 2' }} />
+                  <input value={form.newClinic.city} onChange={e => setForm({...form, newClinic: {...form.newClinic, city: e.target.value}})} placeholder="City" />
+                  <input value={form.newClinic.state} onChange={e => setForm({...form, newClinic: {...form.newClinic, state: e.target.value}})} placeholder="State" />
+                  <input value={form.newClinic.phone} onChange={e => setForm({...form, newClinic: {...form.newClinic, phone: e.target.value}})} placeholder="Phone" />
+                  <input value={form.newClinic.email} onChange={e => setForm({...form, newClinic: {...form.newClinic, email: e.target.value}})} placeholder="Email" />
+                </div>
+                <h4 style={{ marginTop: 12, marginBottom: 8 }}>Providers</h4>
+                {form.providers.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
+                    <input value={p.name} onChange={e => { const np = [...form.providers]; np[i].name = e.target.value; setForm({...form, providers: np}) }} placeholder="Name" style={{ flex: 2 }} />
+                    <select value={p.title} onChange={e => { const np = [...form.providers]; np[i].title = e.target.value; setForm({...form, providers: np}) }} style={{ flex: 1 }}>
+                      <option>MD</option><option>DO</option><option>NP</option><option>PA</option><option>DPM</option>
+                    </select>
+                    <input value={p.npi} onChange={e => { const np = [...form.providers]; np[i].npi = e.target.value; setForm({...form, providers: np}) }} placeholder="NPI" style={{ flex: 1 }} />
+                  </div>
+                ))}
+                <button className="btn secondary" style={{ fontSize: 12 }} onClick={() => setForm({...form, providers: [...form.providers, { name: '', title: 'MD', npi: '' }]})}>+ Add Provider</button>
+              </div>
+            )}
           </div>
           <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Notes" style={{ width: '100%', marginBottom: 10, minHeight: 60 }} />
           <div style={{ marginBottom: 10 }}>
