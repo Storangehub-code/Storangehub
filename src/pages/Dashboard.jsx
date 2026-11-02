@@ -616,13 +616,15 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
             </div>
             <button className="btn" onClick={async () => {
                 const timeStr = followup.hour + ':' + followup.minute + ' ' + followup.ampm
-                await supabase.from('followups').insert({
+                const { error } = await supabase.from('followups').insert({
                   clinic_id: clinic.id,
                   date: followup.date,
                   time: timeStr,
                   type: followup.type,
                   notes: 'Reminder: ' + followup.warn
                 })
+                if (error) console.log('Followup error:', error)
+                else console.log('Followup saved')
                 alert('Follow-up scheduled!')
                 setShowFollowup(false)
               }}>Save</button>
