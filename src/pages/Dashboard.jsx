@@ -246,14 +246,10 @@ Supplies Requested:
     `
     
     try {
-      await fetch('https://api.resend.com/emails', {
+      await fetch('/.netlify/functions/send-email', {
         method: 'POST',
-        headers: {
-          'Authorization': 'Bearer ' + import.meta.env.VITE_RESEND_KEY,
-          'Content-Type': 'application/json'
-        },
+        headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          from: 'Response DX <onboarding@resend.dev>',
           to: 'spudwow@gmail.com',
           subject: 'New Order Request: ' + ordering.name,
           text: orderDetails
