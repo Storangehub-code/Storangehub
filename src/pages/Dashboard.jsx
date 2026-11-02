@@ -97,7 +97,7 @@ export default function Dashboard({ session }) {
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} onSelect={setSelectedProvider} />}
-        {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} onRefresh={loadData} role={role} />}
+        {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} expenses={expenses} providers={providers} />}
         {page === 'notifications' && <Notifications items={notifications} />}
         {page === 'followups' && <Followups clinics={clinics} />}
@@ -769,7 +769,7 @@ function Providers({ providers, onSelect }) {
   )
 }
 
-function Expenses({ expenses, clinics, onRefresh, role }) {
+function Expenses({ expenses, clinics, providers, onRefresh, role }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '', isNew: false, people: '', selectedProviders: [], newClinic: { name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' }, providers: [{ name: '', title: 'MD', npi: '' }] })
   const canApprove = role === 'manager' || role === 'global_admin'
