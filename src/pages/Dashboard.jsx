@@ -893,6 +893,8 @@ function Followups({ clinics }) {
   }, [])
   const [selectedDate, setSelectedDate] = useState(null)
   const [viewingDay, setViewingDay] = useState(null)
+  const [viewMonth, setViewMonth] = useState(new Date())
+  const [viewMode, setViewMode] = useState('month')
   const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
 
   function addFollowup() {
@@ -903,9 +905,8 @@ function Followups({ clinics }) {
     setShowAdd(false)
   }
 
-  const today = new Date()
-  const daysInMonth = new Date(today.getFullYear(), today.getMonth() + 1, 0).getDate()
-  const firstDay = new Date(today.getFullYear(), today.getMonth(), 1).getDay()
+  const daysInMonth = new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 0).getDate()
+  const firstDay = new Date(viewMonth.getFullYear(), viewMonth.getMonth(), 1).getDay()
   const days = []
   for (let i = 0; i < firstDay; i++) days.push(null)
   for (let i = 1; i <= daysInMonth; i++) days.push(i)
@@ -934,7 +935,15 @@ function Followups({ clinics }) {
       )}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>{monthName}</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>←</button>
+            <h3 style={{ margin: 0 }}>{viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+            <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>→</button>
+          </div>
+          <div style={{ marginBottom: 8 }}>
+            <button className={viewMode === 'month' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12, marginRight: 4 }} onClick={() => setViewMode('month')}>Month</button>
+            <button className={viewMode === 'week' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setViewMode('week')}>Week</button>
+          </div>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }}>
             {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} style={{ color: '#6b7280', padding: 4 }}>{d}</div>)}
             {days.map((d, i) => {
@@ -975,9 +984,21 @@ function Followups({ clinics }) {
             <h3 style={{ marginBottom: 16 }}>November {viewingDay}</h3>
             {followups.filter(f => new Date(f.date).getDate() === viewingDay).map(f => (
               <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937' }}>
-                <div style={{ fontWeight: 600 }}>{f.clinics?.name || 'General'}</div>
-                <div style={{ color: '#14b8a6', fontSize: 13 }}>{f.type} · {f.time}</div>
-                <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 4 }}>{f.notes}</div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
+                  <div>
+                    <div style={{ fontWeight: 600 }}>{f.clinics?.name || 'General'}</div>
+                    <div style={{ color: '#14b8a6', fontSize: 13 }}>{f.type} · {f.time}</div>
+                    <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 4 }}>{f.notes}</div>
+                  </div>
+                  <div style={{ display: 'flex', gap: 4 }}>
+                    <button className="btn secondary" style={{ padding: '2px 6px', fontSize: 10 }} onClick={() => alert('Edit: ' + f.id)}>Edit</button>
+                    <button className="btn secondary" style={{ padding: '2px 6px', fontSize: 10, background: '#ef4444' }} onClick={async () => {
+                      await supabase.from('followups').delete().eq('id', f.id)
+                      setFollowups(followups.filter(x => x.id !== f.id))
+                      setViewingDay(null)
+                    }}>Delete</button>
+                  </div>
+                </div>
               </div>
             ))}
             {!followups.filter(f => new Date(f.date).getDate() === viewingDay).length && <p style={{ color: '#6b7280' }}>No follow-ups this day.</p>}
