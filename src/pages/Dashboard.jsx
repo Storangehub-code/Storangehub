@@ -832,14 +832,25 @@ function Expenses({ expenses, clinics, onRefresh, role }) {
                   })
                   const data = await res.json()
                   const text = data.responses?.[0]?.textAnnotations?.[0]?.description || ''
-                  console.log('OCR:', text)
-                  // Try to extract amount
-                  const amountMatch = text.match(/\$?([0-9]+\.[0-9]{2})/)
-                  if (amountMatch) setForm(f => ({ ...f, amount: amountMatch[1] }))
-                  // Try to extract date
+                  console.log('OCR text:', text)
+                  // Extract amounts - look for total, amount, $
+                  const amounts = text.match(/\$?\s*([0-9]+[,.]?[0-9]*\.[0-9]{2})/g) || []
+                  const largestAmount = amounts.map(a => parseFloat(a.replace(/[\$,]/g, ''))).filter(n => !isNaN(n)).sort((a,b) => b-a)[0]
+                  if (largestAmount) setForm(f => ({ ...f, amount: largestAmount.toFixed(2) }))
+                  // Extract date
                   const dateMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)
-                  if (dateMatch) setForm(f => ({ ...f, expense_date: dateMatch[1] }))
-                  alert('Receipt scanned! Check the fields.')
+                  if (dateMatch) {
+                    const parts = dateMatch[1].split(/[\/\-]/)
+                    if (parts.length === 3) {
+                      const year = parts[2].length === 2 ? '20' + parts[2] : parts[2]
+                      const dateStr = year + '-' + parts[0].padStart(2, '0') + '-' + parts[1].padStart(2, '0')
+                      setForm(f => ({ ...f, expense_date: dateStr }))
+                    }
+                  }
+                  // Try to get business name (first line often)
+                  const lines = text.split('\n').filter(l => l.trim())
+                  if (lines[0]) setForm(f => ({ ...f, business: lines[0].substring(0, 50) }))
+                  alert('Receipt scanned! Amount: ' + (largestAmount || 'not found') + ', Date: ' + (dateMatch ? dateMatch[1] : 'not found'))
                 } catch (err) {
                   console.log('OCR error:', err)
                   alert('Could not scan receipt.')
