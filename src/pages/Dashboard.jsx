@@ -516,7 +516,13 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
 
   return (
     <div>
-      <button className="btn secondary" onClick={onBack} style={{ marginBottom: 16 }}>← Back to Accounts</button>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <button className="btn secondary" onClick={onBack}>← Back</button>
+        <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>
+        <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>
+        <a href={'https://www.google.com/maps/search/catering+near+' + encodeURIComponent(clinic.address || clinic.city || '')} target="_blank" rel="noreferrer" className="btn">Find Catering</a>
+        <button className="btn secondary">Requisition Form ▾</button>
+      </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {['info', 'providers', 'activity'].map(t => (
           <button key={t} className={tab === t ? 'btn' : 'btn secondary'} onClick={() => setTab(t)} style={{ textTransform: 'capitalize' }}>{t}</button>
