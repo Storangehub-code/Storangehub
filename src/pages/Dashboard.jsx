@@ -671,13 +671,17 @@ function ProviderDetail({ provider, onBack }) {
   return (
     <div>
       <button className="btn secondary" onClick={onBack} style={{ marginBottom: 16 }}>← Back</button>
-      <div className="card">
+      <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginBottom: 16 }}>{provider.name}, {provider.title}</h3>
         <p style={{ marginBottom: 8 }}><strong>NPI:</strong> {provider.npi || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Email:</strong> {provider.email || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Phone:</strong> {provider.phone || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Clinic:</strong> {provider.clinics?.name || '—'}</p>
         <p><strong>Samples:</strong> {provider.samples || 0}</p>
+      </div>
+      <div className="card">
+        <h3 style={{ marginBottom: 12 }}>Tests</h3>
+        <p style={{ color: '#6b7280' }}>No tests for this provider yet.</p>
       </div>
     </div>
   )
