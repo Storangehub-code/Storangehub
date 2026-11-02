@@ -246,7 +246,7 @@ Supplies Requested:
     `
     
     try {
-      await fetch('/.netlify/functions/send-email', {
+      await fetch('/.netlify/functions/sendemail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
