@@ -771,7 +771,7 @@ function Providers({ providers, onSelect }) {
 
 function Expenses({ expenses, clinics, onRefresh, role }) {
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '', isNew: false, newClinic: { name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' }, providers: [{ name: '', title: 'MD', npi: '' }] })
+  const [form, setForm] = useState({ business: '', amount: '', expense_date: '', exp_type: 'Meals', notes: '', city: '', clinic_id: '', isNew: false, people: '', selectedProviders: [], newClinic: { name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' }, providers: [{ name: '', title: 'MD', npi: '' }] })
   const canApprove = role === 'manager' || role === 'global_admin'
   const total = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
 
@@ -858,7 +858,27 @@ function Expenses({ expenses, clinics, onRefresh, role }) {
               </div>
             )}
           </div>
-          <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Notes" style={{ width: '100%', marginBottom: 10, minHeight: 60 }} />
+          {form.clinic_id && !form.isNew && (
+              <div style={{ gridColumn: 'span 2', marginTop: 8 }}>
+                <label style={{ fontSize: 13, color: '#9ca3af' }}>Providers</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: 8, marginTop: 4 }}>
+                  {providers.filter(p => p.clinic_id === form.clinic_id).map(p => (
+                    <label key={p.id} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>
+                      <input type="checkbox" checked={form.selectedProviders.includes(p.id)} onChange={e => {
+                        const sel = e.target.checked ? [...form.selectedProviders, p.id] : form.selectedProviders.filter(id => id !== p.id)
+                        setForm({...form, selectedProviders: sel})
+                      }} />
+                      {p.name}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            )}
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: 13, color: '#9ca3af' }}>How many people?</label>
+              <input type="number" value={form.people} onChange={e => setForm({...form, people: e.target.value})} placeholder="Number of people" style={{ width: 150, marginTop: 4 }} />
+            </div>
+            <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Notes" style={{ width: '100%', marginBottom: 10, minHeight: 60, gridColumn: 'span 2' }} />
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 13, color: '#9ca3af' }}>Receipt (optional)</label><br/>
             <input type="file" accept="image/*" style={{ marginTop: 4 }} onChange={async (e) => {
