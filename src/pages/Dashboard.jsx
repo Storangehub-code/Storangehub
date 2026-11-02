@@ -86,7 +86,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         
-        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} />}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
@@ -108,7 +108,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ clinics, expenses, providers }) {
+function DashboardHome({ clinics, expenses, providers, tests }) {
   const totalExp = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
   const totalTests = clinics.reduce((s, c) => s + (c.total_tests || 0), 0)
   const activeAccounts = clinics.filter(c => (c.total_tests || 0) > 0).length
