@@ -1,10 +1,10 @@
-exports.handler = async (event) => {
-  if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' }
+export default async (req) => {
+  if (req.method !== 'POST') {
+    return new Response('Method not allowed', { status: 405 })
   }
 
-  const { to, subject, text } = JSON.parse(event.body)
-  const key = process.env.RESEND_KEY
+  const { to, subject, text } = await req.json()
+  const key = Netlify.env.get('RESEND_KEY')
 
   try {
     const res = await fetch('https://api.resend.com/emails', {
@@ -21,8 +21,8 @@ exports.handler = async (event) => {
       })
     })
     const data = await res.json()
-    return { statusCode: 200, body: JSON.stringify(data) }
+    return new Response(JSON.stringify(data), { status: 200 })
   } catch (e) {
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) }
+    return new Response(JSON.stringify({ error: e.message }), { status: 500 })
   }
 }
