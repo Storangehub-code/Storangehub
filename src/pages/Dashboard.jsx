@@ -892,6 +892,7 @@ function Followups({ clinics }) {
     })
   }, [])
   const [selectedDate, setSelectedDate] = useState(null)
+  const [viewingDay, setViewingDay] = useState(null)
   const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
 
   function addFollowup() {
@@ -939,7 +940,7 @@ function Followups({ clinics }) {
             {days.map((d, i) => {
               const dayFollowups = d ? followups.filter(f => new Date(f.date).getDate() === d) : []
               return (
-                <div key={i} onClick={() => d && setSelectedDate(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
+                <div key={i} onClick={() => d && setViewingDay(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
                   {d || ''}
                   {dayFollowups.length > 0 && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 10, color: '#14b8a6' }}>{dayFollowups.length}</span>}
                 </div>
@@ -950,17 +951,40 @@ function Followups({ clinics }) {
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
           {upcoming.map(f => (
-            <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
+            <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
               <div>
                 <strong>{f.clinics?.name || 'General'}</strong> · {f.type}
                 {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
               </div>
-              <span style={{ color: '#14b8a6' }}>{f.date}</span>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                <span style={{ color: '#14b8a6' }}>{f.date}</span>
+                <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => alert('Edit: ' + f.id)}>Edit</button>
+                <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11, background: '#ef4444' }} onClick={async () => {
+                  await supabase.from('followups').delete().eq('id', f.id)
+                  setFollowups(followups.filter(x => x.id !== f.id))
+                }}>Delete</button>
+              </div>
             </div>
           ))}
           {!upcoming.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled.</p>}
         </div>
       </div>
+      {viewingDay && (
+        <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewingDay(null)}>
+          <div className="card" style={{ width: 400, padding: 24 }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 16 }}>November {viewingDay}</h3>
+            {followups.filter(f => new Date(f.date).getDate() === viewingDay).map(f => (
+              <div key={f.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937' }}>
+                <div style={{ fontWeight: 600 }}>{f.clinics?.name || 'General'}</div>
+                <div style={{ color: '#14b8a6', fontSize: 13 }}>{f.type} · {f.time}</div>
+                <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 4 }}>{f.notes}</div>
+              </div>
+            ))}
+            {!followups.filter(f => new Date(f.date).getDate() === viewingDay).length && <p style={{ color: '#6b7280' }}>No follow-ups this day.</p>}
+            <button className="btn secondary" onClick={() => setViewingDay(null)} style={{ marginTop: 16 }}>Close</button>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
