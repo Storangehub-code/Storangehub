@@ -8,6 +8,7 @@ export default function Dashboard({ session }) {
   const [expenses, setExpenses] = useState([])
   const [activities, setActivities] = useState([])
   const [followups, setFollowups] = useState([])
+  const [tests, setTests] = useState([])
   const [notifications, setNotifications] = useState([])
   const [page, setPage] = useState('dashboard')
   const [selectedClinic, setSelectedClinic] = useState(null)
@@ -26,11 +27,13 @@ export default function Dashboard({ session }) {
     const [c, p, e] = await Promise.all([
       supabase.from('clinics').select('*').order('name'),
       supabase.from('providers').select('*, clinics(name)').order('name'),
-      supabase.from('expenses').select('*').order('created_at', { ascending: false })
+      supabase.from('expenses').select('*').order('created_at', { ascending: false }),
+      supabase.from('tests').select('*, clinics(name), providers(name)').order('created_at', { ascending: false })
     ])
     setClinics(c.data || [])
     setProviders(p.data || [])
     setExpenses(e.data || [])
+    setTests(t.data || [])
   }
 
   const role = profile?.role || 'rep'
@@ -42,6 +45,7 @@ export default function Dashboard({ session }) {
     { id: 'prospects', label: 'Prospects' },
     ...(role === 'global_admin' ? [{ id: 'approve', label: 'Approve Accounts' }] : []),
     { id: 'providers', label: 'Providers' },
+    { id: 'tests', label: 'Tests' },
     { id: 'expenses', label: 'Expenses' },
     { id: 'reports', label: 'Reports' },
     { id: 'followups', label: 'Follow-ups' },
@@ -91,6 +95,7 @@ export default function Dashboard({ session }) {
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
+        {page === 'tests' && <Tests tests={tests} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} onSelect={setSelectedProvider} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} expenses={expenses} providers={providers} />}
@@ -522,7 +527,7 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
         {!isProspect && <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>}
         {!isProspect && <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>}
         <a href={'https://www.google.com/maps/search/catering+near+' + encodeURIComponent(clinic.address || clinic.city || '')} target="_blank" rel="noreferrer" className="btn">Find Catering</a>
-        <button className="btn secondary">Requisition Form ▾</button>
+        {!isProspect && <button className="btn secondary">Requisition Form ▾</button>}
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {['info', 'providers', 'activity'].map(t => (
@@ -654,6 +659,32 @@ function ProviderDetail({ provider, onBack }) {
         <p style={{ marginBottom: 8 }}><strong>Phone:</strong> {provider.phone || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Clinic:</strong> {provider.clinics?.name || '—'}</p>
         <p><strong>Samples:</strong> {provider.samples || 0}</p>
+      </div>
+    </div>
+  )
+}
+
+
+function Tests({ tests }) {
+  return (
+    <div>
+      <div className="card">
+        <table>
+          <thead><tr><th>Date</th><th>Accession</th><th>Clinic</th><th>Provider</th><th>Test</th><th>Status</th></tr></thead>
+          <tbody>
+            {tests.map(t => (
+              <tr key={t.id}>
+                <td>{t.collected || '—'}</td>
+                <td>{t.accession || '—'}</td>
+                <td>{t.clinics?.name || '—'}</td>
+                <td>{t.providers?.name || '—'}</td>
+                <td>{t.test_type || '—'}</td>
+                <td><span className="badge" style={{ background: t.finalized ? '#a7f3d0' : '#fef3c7', color: '#000' }}>{t.finalized ? 'Finalized' : 'Pending'}</span></td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!tests.length && <p style={{ color: '#6b7280', padding: 12 }}>No tests yet.</p>}
       </div>
     </div>
   )
@@ -891,6 +922,7 @@ function Notifications({ items }) {
 
 function Followups({ clinics }) {
   const [followups, setFollowups] = useState([])
+  const [tests, setTests] = useState([])
   const [showAdd, setShowAdd] = useState(false)
   
   useEffect(() => {
