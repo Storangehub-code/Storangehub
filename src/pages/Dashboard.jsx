@@ -813,7 +813,40 @@ function Expenses({ expenses, clinics, onRefresh, role }) {
           <textarea value={form.notes} onChange={e => setForm({...form, notes: e.target.value})} placeholder="Notes" style={{ width: '100%', marginBottom: 10, minHeight: 60 }} />
           <div style={{ marginBottom: 10 }}>
             <label style={{ fontSize: 13, color: '#9ca3af' }}>Receipt (optional)</label><br/>
-            <input type="file" accept="image/*" style={{ marginTop: 4 }} />
+            <input type="file" accept="image/*" style={{ marginTop: 4 }} onChange={async (e) => {
+              const file = e.target.files[0]
+              if (!file) return
+              const reader = new FileReader()
+              reader.onload = async () => {
+                const base64 = reader.result.split(',')[1]
+                try {
+                  const res = await fetch('https://vision.googleapis.com/v1/images:annotate?key=AIzaSyB626q0FdMwql3EoMgMFamfJ_ZMv75ylhc', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                      requests: [{
+                        image: { content: base64 },
+                        features: [{ type: 'TEXT_DETECTION' }]
+                      }]
+                    })
+                  })
+                  const data = await res.json()
+                  const text = data.responses?.[0]?.textAnnotations?.[0]?.description || ''
+                  console.log('OCR:', text)
+                  // Try to extract amount
+                  const amountMatch = text.match(/\$?([0-9]+\.[0-9]{2})/)
+                  if (amountMatch) setForm(f => ({ ...f, amount: amountMatch[1] }))
+                  // Try to extract date
+                  const dateMatch = text.match(/(\d{1,2}[\/\-]\d{1,2}[\/\-]\d{2,4})/)
+                  if (dateMatch) setForm(f => ({ ...f, expense_date: dateMatch[1] }))
+                  alert('Receipt scanned! Check the fields.')
+                } catch (err) {
+                  console.log('OCR error:', err)
+                  alert('Could not scan receipt.')
+                }
+              }
+              reader.readAsDataURL(file)
+            }} />
           </div>
           <button className="btn" onClick={addExpense}>Save Expense</button>
           <button className="btn secondary" onClick={() => setShowAdd(false)} style={{ marginLeft: 8 }}>Cancel</button>
