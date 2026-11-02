@@ -510,6 +510,8 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
   const [prov, setProv] = useState({ name: '', title: 'MD', npi: '', email: '', phone: '' })
   const [note, setNote] = useState('')
   const [activityType, setActivityType] = useState('Note')
+  const [editing, setEditing] = useState(false)
+  const [editForm, setEditForm] = useState({ ...clinic })
   const [showFollowup, setShowFollowup] = useState(false)
   const [followup, setFollowup] = useState({ date: '', hour: '9', minute: '00', ampm: 'AM', type: 'Call', warn: '1 day' })
 
@@ -537,11 +539,36 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
+        <button className="btn" onClick={() => setEditing(!editing)}>{editing ? 'Cancel Edit' : 'Edit'}</button>
         {!isProspect && <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>}
         {!isProspect && <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>}
         <a href={'https://www.google.com/maps/search/catering+near+' + encodeURIComponent(clinic.address || clinic.city || '')} target="_blank" rel="noreferrer" className="btn">Find Catering</a>
         {!isProspect && <button className="btn secondary">Requisition Form ▾</button>}
       </div>
+      {editing && (
+        <div className="card" style={{ marginBottom: 16 }}>
+          <h3 style={{ marginBottom: 12 }}>Edit {isProspect ? 'Prospect' : 'Account'}</h3>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <input value={editForm.name || ''} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
+            <select value={editForm.type || ''} onChange={e => setEditForm({...editForm, type: e.target.value})}>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
+            </select>
+            <input value={editForm.address || ''} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" style={{ gridColumn: 'span 2' }} />
+            <input value={editForm.city || ''} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
+            <input value={editForm.state || ''} onChange={e => setEditForm({...editForm, state: e.target.value})} placeholder="State" />
+            <input value={editForm.phone || ''} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Phone" />
+            <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
+            <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
+            <input value={editForm.emr || ''} onChange={e => setEditForm({...editForm, emr: e.target.value})} placeholder="EMR" />
+          </div>
+          <button className="btn" onClick={async () => {
+            await supabase.from('clinics').update(editForm).eq('id', clinic.id)
+            setEditing(false)
+            onRefresh()
+            alert('Saved!')
+          }}>Save Changes</button>
+        </div>
+      )}
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         {['info', 'providers', 'activity', 'tests'].map(t => (
           <button key={t} className={tab === t ? 'btn' : 'btn secondary'} onClick={() => setTab(t)} style={{ textTransform: 'capitalize' }}>{t}</button>
