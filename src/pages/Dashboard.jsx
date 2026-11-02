@@ -492,7 +492,7 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
   const [note, setNote] = useState('')
   const [activityType, setActivityType] = useState('Note')
   const [showFollowup, setShowFollowup] = useState(false)
-  const [followup, setFollowup] = useState({ date: '', time: '', type: 'Call', warn: '1 day' })
+  const [followup, setFollowup] = useState({ date: '', hour: '9', minute: '00', ampm: 'AM', type: 'Call', warn: '1 day' })
 
   async function addProvider() {
     if (!prov.name.trim()) return
@@ -590,7 +590,17 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider }
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Time</label>
-              <input type="time" value={followup.time} onChange={e => setFollowup({...followup, time: e.target.value})} style={{ width: '100%' }} />
+              <div style={{ display: 'flex', gap: 8 }}>
+                <select value={followup.hour} onChange={e => setFollowup({...followup, hour: e.target.value})} style={{ flex: 1 }}>
+                  {[1,2,3,4,5,6,7,8,9,10,11,12].map(h => <option key={h} value={h}>{h}</option>)}
+                </select>
+                <select value={followup.minute} onChange={e => setFollowup({...followup, minute: e.target.value})} style={{ flex: 1 }}>
+                  {['00','15','30','45'].map(m => <option key={m} value={m}>{m}</option>)}
+                </select>
+                <select value={followup.ampm} onChange={e => setFollowup({...followup, ampm: e.target.value})} style={{ flex: 1 }}>
+                  <option>AM</option><option>PM</option>
+                </select>
+              </div>
             </div>
             <div style={{ marginBottom: 12 }}>
               <label style={{ display: 'block', marginBottom: 4, fontSize: 13 }}>Type</label>
