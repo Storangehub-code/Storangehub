@@ -24,7 +24,7 @@ export default function Dashboard({ session }) {
   }
 
   async function loadData() {
-    const [c, p, e] = await Promise.all([
+    const [c, p, e, testData] = await Promise.all([
       supabase.from('clinics').select('*').order('name'),
       supabase.from('providers').select('*, clinics(name)').order('name'),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
@@ -33,7 +33,7 @@ export default function Dashboard({ session }) {
     setClinics(c.data || [])
     setProviders(p.data || [])
     setExpenses(e.data || [])
-    setTests(t.data || [])
+    setTests(testData.data || [])
   }
 
   const role = profile?.role || 'rep'
