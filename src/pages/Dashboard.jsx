@@ -1349,8 +1349,7 @@ function Followups({ clinics }) {
   return (
     <div>
       
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-        <div className="card">
+      <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>←</button>
             <h3 style={{ margin: 0 }}>{viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
