@@ -1304,19 +1304,17 @@ function Notifications({ items }) {
 
 function Followups({ clinics }) {
   const [followups, setFollowups] = useState([])
-  const [tests, setTests] = useState([])
   const [showAdd, setShowAdd] = useState(false)
-  
+  const [viewingDay, setViewingDay] = useState(null)
+  const [viewMonth, setViewMonth] = useState(new Date())
+  const [viewMode, setViewMode] = useState('month')
+  const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
+
   useEffect(() => {
     supabase.from('followups').select('*, clinics(name)').order('date').then(({ data }) => {
       setFollowups(data || [])
     })
   }, [])
-  const [selectedDate, setSelectedDate] = useState(null)
-  const [viewingDay, setViewingDay] = useState(null)
-  const [viewMonth, setViewMonth] = useState(new Date())
-  const [viewMode, setViewMode] = useState('month')
-  const [form, setForm] = useState({ clinic_id: '', date: '', type: 'Call', notes: '' })
 
   function addFollowup() {
     if (!form.date) return
@@ -1343,55 +1341,52 @@ function Followups({ clinics }) {
     for (let i = 1; i <= daysInMonth; i++) days.push(i)
   }
 
-  const monthName = viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
   const upcoming = [...followups].sort((a, b) => a.date.localeCompare(b.date))
 
   return (
     <>
       <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>←</button>
-            <h3 style={{ margin: 0 }}>{viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
-            <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>→</button>
-          </div>
-          <div style={{ marginBottom: 8 }}>
-            <button className={viewMode === 'month' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12, marginRight: 4 }} onClick={() => setViewMode('month')}>Month</button>
-            <button className={viewMode === 'week' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setViewMode('week')}>Week</button>
-          </div>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }}>
-            {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} style={{ color: '#6b7280', padding: 4 }}>{d}</div>)}
-            {days.map((d, i) => {
-              const dayFollowups = d ? followups.filter(f => new Date(f.date).getDate() === d) : []
-              return (
-                <div key={i} onClick={() => d && setViewingDay(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: selectedDate === d ? '#0d9488' : dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
-                  {d || ''}
-                  {dayFollowups.length > 0 && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 10, color: '#14b8a6' }}>{dayFollowups.length}</span>}
-                </div>
-              )
-            })}
-          </div>
+        <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+          <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>←</button>
+          <h3 style={{ margin: 0 }}>{viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })}</h3>
+          <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() + 1, 1))}>→</button>
+        </div>
+        <div style={{ marginBottom: 8 }}>
+          <button className={viewMode === 'month' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12, marginRight: 4 }} onClick={() => setViewMode('month')}>Month</button>
+          <button className={viewMode === 'week' ? 'btn' : 'btn secondary'} style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setViewMode('week')}>Week</button>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, textAlign: 'center', fontSize: 12 }}>
+          {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => <div key={d} style={{ color: '#6b7280', padding: 4 }}>{d}</div>)}
+          {days.map((d, i) => {
+            const dayFollowups = d ? followups.filter(f => new Date(f.date).getDate() === d) : []
+            return (
+              <div key={i} onClick={() => d && setViewingDay(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
+                {d || ''}
+                {dayFollowups.length > 0 && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 10, color: '#14b8a6' }}>{dayFollowups.length}</span>}
+              </div>
+            )
+          })}
         </div>
       </div>
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
-          {upcoming.map(f => (
-            <div key={f.id} onClick={() => setViewingDay(new Date(f.date).getDate())} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
-              <div>
-                <strong>{f.clinics?.name || 'General'}</strong> · {f.type}
-                {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
-              </div>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                <span style={{ color: '#14b8a6' }}>{f.date}</span>
-                <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => alert('Edit: ' + f.id)}>Edit</button>
-                <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11, background: '#ef4444' }} onClick={async () => {
-                  await supabase.from('followups').delete().eq('id', f.id)
-                  setFollowups(followups.filter(x => x.id !== f.id))
-                }}>Delete</button>
-              </div>
+        {upcoming.map(f => (
+          <div key={f.id} onClick={() => setViewingDay(new Date(f.date).getDate())} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
+            <div>
+              <strong>{f.clinics?.name || 'General'}</strong> · {f.type}
+              {f.notes && <div style={{ color: '#6b7280', fontSize: 13 }}>{f.notes}</div>}
             </div>
-          ))}
-          {!upcoming.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled.</p>}
-        </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <span style={{ color: '#14b8a6' }}>{f.date}</span>
+              <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11 }} onClick={() => alert('Edit: ' + f.id)}>Edit</button>
+              <button className="btn secondary" style={{ padding: '2px 8px', fontSize: 11, background: '#ef4444' }} onClick={async () => {
+                await supabase.from('followups').delete().eq('id', f.id)
+                setFollowups(followups.filter(x => x.id !== f.id))
+              }}>Delete</button>
+            </div>
+          </div>
+        ))}
+        {!upcoming.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled.</p>}
       </div>
       {viewingDay && (
         <div style={{ position: 'fixed', top: 0, left: 0, right: 0, bottom: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setViewingDay(null)}>
