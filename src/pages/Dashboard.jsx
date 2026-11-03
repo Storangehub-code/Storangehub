@@ -656,8 +656,8 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
         <button className="btn" onClick={() => setEditing(!editing)}>{editing ? 'Cancel Edit' : 'Edit'}</button>
-        {!isProspect && <a href={clinic.supply_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>}
-        {!isProspect && <a href={clinic.pickup_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>}
+        {!isProspect && <a href={clinic.supplies_url || 'https://www.responsedx.net/request-supplies'} target="_blank" rel="noreferrer" className="btn">Request Supplies</a>}
+        {!isProspect && <a href={clinic.ordering_url || 'https://www.responsedx.net/copy-of-request-an-account'} target="_blank" rel="noreferrer" className="btn">Request Pickup</a>}
         <a href={'https://www.google.com/maps/search/catering+near+' + encodeURIComponent(clinic.address || clinic.city || '')} target="_blank" rel="noreferrer" className="btn">Find Catering</a>
         {!isProspect && <button className="btn secondary">Requisition Form ▾</button>}
       </div>
