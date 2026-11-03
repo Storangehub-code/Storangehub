@@ -53,6 +53,7 @@ export default function Dashboard({ session }) {
     { id: 'prospects', label: 'Prospects' },
     ...(role === 'global_admin' ? [{ id: 'approve', label: 'Approve Accounts' }] : []),
     { id: 'providers', label: 'Providers' },
+    ...(role === 'manager' || role === 'global_admin' ? [{ id: 'reps', label: 'Reps' }] : []),
     { id: 'tests', label: 'Tests' },
     { id: 'expenses', label: 'Expenses' },
     { id: 'reports', label: 'Reports' },
@@ -1417,6 +1418,31 @@ function Followups({ clinics }) {
         </div>
       )}
     </>
+  )
+}
+
+function RepsList() {
+  const [reps, setReps] = useState([])
+  useEffect(() => {
+    supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
+  }, [])
+  return (
+    <div className="card">
+      <h3 style={{ marginBottom: 12 }}>Reps</h3>
+      <table>
+        <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
+        <tbody>
+          {reps.map(r => (
+            <tr key={r.id}>
+              <td>{r.full_name || '—'}</td>
+              <td>{r.email || '—'}</td>
+              <td><span className="badge">{r.role}</span></td>
+            </tr>
+          ))}
+        </tbody>
+      </table>
+      {!reps.length && <p style={{ color: '#6b7280' }}>No reps yet.</p>}
+    </div>
   )
 }
 
