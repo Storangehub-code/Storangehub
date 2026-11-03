@@ -676,6 +676,22 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
             <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
             <input value={editForm.emr || ''} onChange={e => setEditForm({...editForm, emr: e.target.value})} placeholder="EMR" />
+            <input value={editForm.ordering_url || ''} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} placeholder="Custom Ordering URL" style={{ gridColumn: 'span 2' }} />
+            <input value={editForm.supplies_url || ''} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} placeholder="Custom Supplies URL" style={{ gridColumn: 'span 2' }} />
+            <div style={{ gridColumn: 'span 2' }}>
+              <label style={{ fontSize: 13, color: '#9ca3af' }}>Upload Requisition</label>
+              <input type="file" onChange={async (e) => {
+                const file = e.target.files[0]
+                if (!file) return
+                const path = 'requisitions/' + clinic.id + '/' + Date.now() + '-' + file.name
+                const { error } = await supabase.storage.from('docs').upload(path, file)
+                if (error) return alert(error.message)
+                const { data } = supabase.storage.from('docs').getPublicUrl(path)
+                setEditForm({...editForm, requisition_url: data.publicUrl })
+                alert('Requisition uploaded!')
+              }} />
+              {editForm.requisition_url && <a href={editForm.requisition_url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#14b8a6' }}>View current</a>}
+            </div>
           </div>
           <button className="btn" onClick={async () => {
             await supabase.from('clinics').update(editForm).eq('id', clinic.id)
@@ -696,6 +712,9 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <p><strong>Type:</strong> {clinic.type || '—'}</p>
             <p><strong>EMR:</strong> {clinic.emr || '—'}</p>
+            <p><strong>Ordering URL:</strong> {clinic.ordering_url ? <a href={clinic.ordering_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>{clinic.ordering_url}</a> : '—'}</p>
+            <p><strong>Supplies URL:</strong> {clinic.supplies_url ? <a href={clinic.supplies_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>{clinic.supplies_url}</a> : '—'}</p>
+            <p><strong>Requisition:</strong> {clinic.requisition_url ? <a href={clinic.requisition_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a> : '—'}</p>
             <p><strong>Address:</strong> {clinic.address || '—'}</p>
             {!clinic.address?.includes(clinic.city) && <p><strong>City:</strong> {clinic.city || '—'}</p>}
             <p><strong>Phone:</strong> {String(clinic.phone || '').replace('.0', '') || '—'}</p>
