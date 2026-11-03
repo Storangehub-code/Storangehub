@@ -1372,8 +1372,9 @@ function Followups({ clinics }) {
             })}
           </div>
         </div>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
+      </div>
+      <div className="card">
+        <h3 style={{ marginBottom: 12 }}>Upcoming</h3>
           {upcoming.map(f => (
             <div key={f.id} onClick={() => setViewingDay(new Date(f.date).getDate())} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center', cursor: 'pointer' }}>
               <div>
