@@ -89,10 +89,10 @@ export default function Dashboard({ session }) {
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
-        {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
+        {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
-          <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
+          <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} />}
@@ -504,7 +504,7 @@ function Accounts({ clinics, onRefresh, onSelect }) {
   )
 }
 
-function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, isProspect }) {
+function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectProvider, isProspect }) {
   const [showAdd, setShowAdd] = useState(false)
   const [tab, setTab] = useState('info')
   const [prov, setProv] = useState({ name: '', title: 'MD', npi: '', email: '', phone: '' })
@@ -634,8 +634,21 @@ function ClinicDetail({ clinic, providers, onBack, onRefresh, onSelectProvider, 
       )}
       {tab === 'tests' && (
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Tests</h3>
-          <p style={{ color: '#6b7280' }}>No tests for this account yet.</p>
+          <h3 style={{ marginBottom: 12 }}>Tests ({(tests || []).length})</h3>
+          <table>
+            <thead><tr><th>Date</th><th>Accession</th><th>Test</th><th>Status</th></tr></thead>
+            <tbody>
+              {(tests || []).map(t => (
+                <tr key={t.id}>
+                  <td>{t.collected || '—'}</td>
+                  <td>{t.accession || '—'}</td>
+                  <td>{t.test_type || '—'}</td>
+                  <td><span className="badge" style={{ background: t.finalized ? '#a7f3d0' : '#fef3c7', color: '#000' }}>{t.finalized ? 'Finalized' : 'Pending'}</span></td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests for this account yet.</p>}
         </div>
       )}
       {showFollowup && (
