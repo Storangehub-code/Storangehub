@@ -22,6 +22,7 @@ export default function Dashboard({ session }) {
   const [selectedClinic, setSelectedClinic] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [selectedReps, setSelectedReps] = useState([])
+  const [reps, setReps] = useState([])
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) loadData() }, [profile])
@@ -43,6 +44,8 @@ export default function Dashboard({ session }) {
     setProviders(p.data || [])
     setExpenses(e.data || [])
     setTests(testData.data || [])
+    const { data: repsData } = await supabase.from('profiles').select('*').eq('role', 'rep')
+    setReps(repsData || [])
   }
 
   const role = profile?.role || 'rep'
@@ -96,7 +99,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         
-        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} />}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
@@ -119,7 +122,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ clinics, expenses, providers, tests, selectedReps }) {
+function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps }) {
   const filtered = selectedReps?.length > 0
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [testPage, setTestPage] = useState(0)
@@ -170,7 +173,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps }) {
   return (
     <div>
       <p style={{ color: '#64748b', marginBottom: 20, fontSize: 14 }}>Data through {new Date().toLocaleDateString()}</p>
-      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to {selectedReps.length} rep(s)</p></div>}
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
         <div className="kpi"><div className="kpi-value">{activeAccounts}</div><div className="kpi-label">Active Accounts</div><div className="kpi-change up">{clinics.length} total</div></div>
