@@ -686,11 +686,13 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
                 const path = 'requisitions/' + clinic.id + '/' + Date.now() + '-' + file.name
                 const { error } = await supabase.storage.from('docs').upload(path, file)
                 if (error) return alert(error.message)
-                const { data } = supabase.storage.from('docs').getPublicUrl(path)
-                setEditForm({...editForm, requisition_url: data.publicUrl })
+                setEditForm({...editForm, requisition_url: path })
                 alert('Requisition uploaded!')
               }} />
-              {editForm.requisition_url && <a href={editForm.requisition_url} target="_blank" rel="noreferrer" style={{ marginLeft: 8, color: '#14b8a6' }}>View current</a>}
+              {editForm.requisition_url && <button className="btn secondary btn-sm" style={{ marginLeft: 8 }} onClick={async () => {
+                const { data } = await supabase.storage.from('docs').createSignedUrl(editForm.requisition_url, 60)
+                if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+              }}>View current</button>}
             </div>
           </div>
           <button className="btn" onClick={async () => {
@@ -714,7 +716,10 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <p><strong>EMR:</strong> {clinic.emr || '—'}</p>
             <p><strong>Ordering URL:</strong> {clinic.ordering_url ? <a href={clinic.ordering_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>{clinic.ordering_url}</a> : '—'}</p>
             <p><strong>Supplies URL:</strong> {clinic.supplies_url ? <a href={clinic.supplies_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>{clinic.supplies_url}</a> : '—'}</p>
-            <p><strong>Requisition:</strong> {clinic.requisition_url ? <a href={clinic.requisition_url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a> : '—'}</p>
+            <p><strong>Requisition:</strong> {clinic.requisition_url ? <button className="btn secondary btn-sm" onClick={async () => {
+              const { data } = await supabase.storage.from('docs').createSignedUrl(clinic.requisition_url, 60)
+              if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+            }}>View PDF</button> : '—'}</p>
             <p><strong>Address:</strong> {clinic.address || '—'}</p>
             {!clinic.address?.includes(clinic.city) && <p><strong>City:</strong> {clinic.city || '—'}</p>}
             <p><strong>Phone:</strong> {String(clinic.phone || '').replace('.0', '') || '—'}</p>
