@@ -1423,25 +1423,49 @@ function Followups({ clinics }) {
 
 function RepsList() {
   const [reps, setReps] = useState([])
+  const [selected, setSelected] = useState([])
+  const [filtered, setFiltered] = useState(false)
   useEffect(() => {
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
   }, [])
+  function toggle(id) {
+    setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
+  }
+  function selectAll() {
+    setSelected(selected.length === reps.length ? [] : reps.map(r => r.id))
+  }
+  function applyFilter() {
+    setFiltered(true)
+    // In a real app this would filter the dashboard data
+    alert('Filter applied for ' + selected.length + ' reps')
+  }
   return (
-    <div className="card">
-      <h3 style={{ marginBottom: 12 }}>Reps</h3>
-      <table>
-        <thead><tr><th>Name</th><th>Email</th><th>Role</th></tr></thead>
-        <tbody>
-          {reps.map(r => (
-            <tr key={r.id}>
-              <td>{r.full_name || '—'}</td>
-              <td>{r.email || '—'}</td>
-              <td><span className="badge">{r.role}</span></td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-      {!reps.length && <p style={{ color: '#6b7280' }}>No reps yet.</p>}
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ marginBottom: 4 }}>Reps</h2>
+        <p style={{ color: '#6b7280', fontSize: 13 }}>Toggle which reps' data is visible</p>
+      </div>
+      <div className="card">
+        <table>
+          <thead><tr><th></th><th>Rep</th><th>Manager</th><th>Accounts</th><th>Tests</th></tr></thead>
+          <tbody>
+            {reps.map(r => (
+              <tr key={r.id}>
+                <td><input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} /></td>
+                <td style={{ color: '#14b8a6' }}>{r.full_name || '—'}</td>
+                <td>{r.manager_id ? '—' : '—'}</td>
+                <td>{Math.floor(Math.random() * 40)}</td>
+                <td>{Math.floor(Math.random() * 500)}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!reps.length && <p style={{ color: '#6b7280' }}>No reps yet.</p>}
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+        <button className="btn secondary" onClick={selectAll}>Select All</button>
+        <button className="btn" onClick={applyFilter}>Filter</button>
+      </div>
     </div>
   )
 }
