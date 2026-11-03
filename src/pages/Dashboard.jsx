@@ -1,3 +1,11 @@
+
+function formatName(name) {
+  if (!name) return '—'
+  const parts = name.split(',').map(p => p.trim())
+  if (parts.length === 3) return parts[0] + ', ' + parts[2] + ', ' + parts[1]
+  return name
+}
+
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
@@ -168,7 +176,7 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
           <h3 style={{ marginBottom: 12 }}>Top Providers</h3>
           {providers.slice(0, 5).map(p => (
             <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{p.name}</span><span style={{ color: '#6b7280' }}>{p.samples || 0}</span>
+              <span>{formatName(p.name)}</span><span style={{ color: '#6b7280' }}>{p.samples || 0}</span>
             </div>
           ))}
           {!providers.length && <p style={{ color: '#6b7280' }}>No providers yet</p>}
@@ -261,7 +269,7 @@ function ApproveAccounts({ clinics, onRefresh }) {
           <tbody>
             {pending.map(p => (
               <tr key={p.id}>
-                <td>{p.name}</td>
+                <td>{formatName(p.name)}</td>
                 <td>{p.type || '—'}</td>
                 <td>{p.city || '—'}</td>
                 <td><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setSelected(p)}>Review</button></td>
@@ -407,7 +415,7 @@ Supplies Requested:
           <h4 style={{ marginBottom: 8 }}>Providers</h4>
           {providers.map((p, i) => (
             <div key={i} style={{ display: 'grid', gridTemplateColumns: '1fr 80px 1fr auto', gap: 8, marginBottom: 8 }}>
-              <input value={p.name} onChange={e => { const n = [...providers]; n[i].name = e.target.value; setProviders(n) }} placeholder="Name" />
+              <input value={formatName(p.name)} onChange={e => { const n = [...providers]; n[i].name = e.target.value; setProviders(n) }} placeholder="Name" />
               <select value={p.title} onChange={e => { const n = [...providers]; n[i].title = e.target.value; setProviders(n) }}><option>MD</option><option>DO</option><option>NP</option><option>PA</option><option>DPM</option></select>
               <input value={p.npi} onChange={e => { const n = [...providers]; n[i].npi = e.target.value; setProviders(n) }} placeholder="NPI" />
               <button className="btn secondary" onClick={() => setProviders(providers.filter((_, j) => j !== i))} style={{ padding: '8px 12px' }}>−</button>
@@ -424,7 +432,7 @@ Supplies Requested:
           <tbody>
             {prospects.map(p => (
               <tr key={p.id} onClick={() => onSelect(p)} style={{ cursor: 'pointer' }}>
-                <td style={{ color: '#14b8a6' }}>{p.name}</td>
+                <td style={{ color: '#14b8a6' }}>{formatName(p.name)}</td>
                 <td>{p.type || '—'}</td>
                 <td>{p.city || '—'}</td>
                 <td onClick={e => e.stopPropagation()}>
@@ -581,8 +589,8 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <p><strong>Type:</strong> {clinic.type || '—'}</p>
             <p><strong>EMR:</strong> {clinic.emr || '—'}</p>
             <p><strong>Address:</strong> {clinic.address || '—'}</p>
-            <p><strong>City:</strong> {clinic.city || '—'}, {clinic.state || ''}</p>
-            <p><strong>Phone:</strong> {clinic.phone || '—'}</p>
+            {!clinic.address?.includes(clinic.city) && <p><strong>City:</strong> {clinic.city || '—'}</p>}
+            <p><strong>Phone:</strong> {String(clinic.phone || '').replace('.0', '') || '—'}</p>
             <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
             <p style={{ gridColumn: 'span 2' }}><strong>Email:</strong> {clinic.email || '—'}</p>
           </div>
@@ -609,7 +617,7 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
           )}
           {providers.map(p => (
             <div key={p.id} onClick={() => onSelectProvider(p)} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-              <div><span style={{ color: '#14b8a6' }}>{p.name}</span> <span style={{ color: '#9ca3af' }}>· {p.title}</span></div>
+              <div><span style={{ color: '#14b8a6' }}>{formatName(p.name)}</span> <span style={{ color: '#9ca3af' }}>· {p.title}</span></div>
               <span style={{ color: '#6b7280' }}>{p.npi || ''}</span>
             </div>
           ))}
@@ -712,7 +720,7 @@ function ProviderDetail({ provider, onBack }) {
     <div>
       <button className="btn secondary" onClick={onBack} style={{ marginBottom: 16 }}>← Back</button>
       <div className="card" style={{ marginBottom: 16 }}>
-        <h3 style={{ marginBottom: 16 }}>{provider.name}, {provider.title}</h3>
+        <h3 style={{ marginBottom: 16 }}>{formatName(provider.name)}, {provider.title}</h3>
         <p style={{ marginBottom: 8 }}><strong>NPI:</strong> {provider.npi || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Email:</strong> {provider.email || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Phone:</strong> {provider.phone || '—'}</p>
@@ -767,7 +775,7 @@ function Providers({ providers, onSelect }) {
           <tbody>
             {filtered.map(p => (
               <tr key={p.id} onClick={() => onSelect(p)} style={{ cursor: 'pointer' }}>
-                <td style={{ color: '#14b8a6' }}>{p.name}</td>
+                <td style={{ color: '#14b8a6' }}>{formatName(p.name)}</td>
                 <td>{p.title || '—'}</td>
                 <td>{p.clinics?.name || '—'}</td>
                 <td>{p.npi || '—'}</td>
@@ -860,7 +868,7 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
                 <h4 style={{ marginTop: 12, marginBottom: 8 }}>Providers</h4>
                 {form.providers.map((p, i) => (
                   <div key={i} style={{ display: 'flex', gap: 8, marginBottom: 8 }}>
-                    <input value={p.name} onChange={e => { const np = [...form.providers]; np[i].name = e.target.value; setForm({...form, providers: np}) }} placeholder="Name" style={{ flex: 2 }} />
+                    <input value={formatName(p.name)} onChange={e => { const np = [...form.providers]; np[i].name = e.target.value; setForm({...form, providers: np}) }} placeholder="Name" style={{ flex: 2 }} />
                     <select value={p.title} onChange={e => { const np = [...form.providers]; np[i].title = e.target.value; setForm({...form, providers: np}) }} style={{ flex: 1 }}>
                       <option>MD</option><option>DO</option><option>NP</option><option>PA</option><option>DPM</option>
                     </select>
@@ -881,7 +889,7 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
                         const sel = e.target.checked ? [...form.selectedProviders, p.id] : form.selectedProviders.filter(id => id !== p.id)
                         setForm({...form, selectedProviders: sel})
                       }} />
-                      {p.name}
+                      {formatName(p.name)}
                     </label>
                   ))}
                 </div>
