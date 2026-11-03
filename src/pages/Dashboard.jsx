@@ -245,14 +245,7 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
             </div>
           )}
         </div>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
-          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests by rep</p>
-        </div>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
-          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests from assigned reps</p>
-        </div>
+        
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
         <div className="card">
@@ -265,11 +258,11 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
-          <p style={{ color: '#6b7280' }}>Coming soon</p>
+          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests from assigned reps</p>
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
-          <p style={{ color: '#6b7280' }}>Coming soon</p>
+          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests by rep</p>
         </div>
       </div>
     </div>
