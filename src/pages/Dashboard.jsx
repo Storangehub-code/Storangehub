@@ -572,7 +572,13 @@ function Accounts({ clinics, tests, onRefresh, onSelect }) {
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {filtered.map(c => (
-          <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: routeAccounts.includes(c.id) ? '2px solid #14b8a6' : '1px solid #1f2937' }}>
+          <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: (() => {
+              const hasSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi'))
+              const recentSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi') && new Date(t.collected_date || t.finalized_date || 0) > new Date(Date.now() - 15 * 24 * 60 * 60 * 1000))
+              if (hasSynovi && !recentSynovi) return '2px solid #f97316'
+              if (routeAccounts.includes(c.id)) return '2px solid #14b8a6'
+              return '1px solid #1f2937'
+            })() }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
               <span className="badge" style={{ background: (tests || []).some(t => t.clinic_id === c.id) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => t.clinic_id === c.id) ? 'Active' : 'Inactive'}</span>
