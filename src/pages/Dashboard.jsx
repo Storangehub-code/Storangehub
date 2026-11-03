@@ -117,14 +117,32 @@ export default function Dashboard({ session }) {
 }
 
 function DashboardHome({ clinics, expenses, providers, tests }) {
+  const [selectedMonth, setSelectedMonth] = useState(null)
   const totalTests = (tests || []).length
   const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id)).length
   const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id)).length
   const needAttention = clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length
   
-  // Count tests by type
+  // Calculate tests by month
+  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
+  const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10' }
+  const monthlyCounts = {}
+  months.forEach(m => { monthlyCounts[m] = 0 })
+  ;(tests || []).forEach(t => {
+    if (t.collected) {
+      const month = t.collected.substring(5, 7)
+      const monthName = Object.entries(monthMap).find(([k, v]) => v === month)?.[0]
+      if (monthName) monthlyCounts[monthName]++
+    }
+  })
+  const maxCount = Math.max(...Object.values(monthlyCounts), 1)
+  
+  // Count tests by type (filtered by selected month)
   const testCounts = {}
-  ;(tests || []).forEach(t => { testCounts[t.test_type] = (testCounts[t.test_type] || 0) + 1 })
+  ;(tests || []).filter(t => {
+    if (!selectedMonth) return true
+    return t.collected?.substring(5, 7) === monthMap[selectedMonth]
+  }).forEach(t => { testCounts[t.test_type] = (testCounts[t.test_type] || 0) + 1 })
   const topTests = Object.entries(testCounts).sort((a, b) => b[1] - a[1]).slice(0, 4)
   
   // Top providers by test count
@@ -157,9 +175,10 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Monthly Testing Volume</h3>
           <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
-            {['Apr','May','Jun','Jul','Aug','Sep','Oct'].map((m, i) => (
-              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ height: `${40 + i * 15}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
+            {months.map(m => (
+              <div key={m} onClick={() => setSelectedMonth(selectedMonth === m ? null : m)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+                <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{monthlyCounts[m]}</div>
+                <div style={{ height: `${Math.max(20, (monthlyCounts[m] / maxCount) * 120)}px`, background: selectedMonth === m ? '#14b8a6' : 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0', opacity: selectedMonth && selectedMonth !== m ? 0.4 : 1 }}></div>
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
               </div>
             ))}
