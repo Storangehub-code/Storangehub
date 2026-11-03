@@ -104,7 +104,7 @@ export default function Dashboard({ session }) {
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} />}
-        {page === 'providers' && !selectedProvider && <Providers providers={providers} onSelect={setSelectedProvider} />}
+        {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} expenses={expenses} providers={providers} />}
         {page === 'notifications' && <Notifications items={notifications} />}
@@ -843,28 +843,42 @@ function Tests({ tests }) {
   )
 }
 
-function Providers({ providers, onSelect }) {
+function Providers({ providers, clinics, tests, onSelect, onSelectClinic }) {
   const [search, setSearch] = useState('')
-  const [accountSort, setAccountSort] = useState('az')
-  const [routeMode, setRouteMode] = useState(false)
-  const [routeAccounts, setRouteAccounts] = useState([])
-  const filtered = providers.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
+  const [sortBy, setSortBy] = useState('volume')
+  const filtered = [...providers].filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
+    if (sortBy === 'az') return (a.name || '').localeCompare(b.name || '')
+    const aCount = (tests || []).filter(t => t.provider_id === a.id).length
+    const bCount = (tests || []).filter(t => t.provider_id === b.id).length
+    return bCount - aCount
+  })
   return (
     <div>
-      <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search providers..." style={{ marginBottom: 16, maxWidth: 280 }} />
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search providers..." style={{ maxWidth: 280 }} />
+        <select className="form-input" style={{ width: 160 }} onChange={(e) => setSortBy(e.target.value)} value={sortBy}>
+          <option value="volume">Sort: Volume</option>
+          <option value="az">Sort: A-Z</option>
+        </select>
+      </div>
       <div className="card">
         <table>
-          <thead><tr><th>Name</th><th>Title</th><th>Clinic</th><th>NPI</th><th>Samples</th></tr></thead>
+          <thead><tr><th>Rank</th><th>Provider</th><th>Clinic</th><th>Samples</th><th>Status</th></tr></thead>
           <tbody>
-            {filtered.map(p => (
-              <tr key={p.id} onClick={() => onSelect(p)} style={{ cursor: 'pointer' }}>
-                <td style={{ color: '#14b8a6' }}>{formatName(p.name)}</td>
-                <td>{p.title || '—'}</td>
-                <td>{p.clinics?.name || '—'}</td>
-                <td>{p.npi || '—'}</td>
-                <td>{p.samples || 0}</td>
-              </tr>
-            ))}
+            {filtered.map((p, i) => {
+              const count = (tests || []).filter(t => t.provider_id === p.id).length
+              const clinic = clinics.find(c => c.id === p.clinic_id)
+              const isActive = count > 0
+              return (
+                <tr key={p.id} style={{ cursor: 'pointer' }}>
+                  <td>{i + 1}</td>
+                  <td style={{ color: '#14b8a6' }} onClick={() => onSelect(p)}>{formatName(p.name)}</td>
+                  <td style={{ color: '#14b8a6' }} onClick={() => clinic && onSelectClinic(clinic)}>{clinic?.name || '—'}</td>
+                  <td>{count}</td>
+                  <td><span className="badge" style={{ background: isActive ? '#a7f3d0' : '#fecaca', color: '#000' }}>{isActive ? 'Active' : 'Inactive'}</span></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {!filtered.length && <p style={{ color: '#6b7280', padding: 12 }}>No providers found.</p>}
