@@ -98,7 +98,7 @@ export default function Dashboard({ session }) {
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
-        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
+        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
@@ -512,7 +512,7 @@ function formatPhone(p) {
   return n || '—'
 }
 
-function Accounts({ clinics, onRefresh, onSelect }) {
+function Accounts({ clinics, tests, onRefresh, onSelect }) {
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
   const [accountSort, setAccountSort] = useState('az')
@@ -521,7 +521,11 @@ function Accounts({ clinics, onRefresh, onSelect }) {
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
   const filtered = [...clinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
     if (accountSort === 'az') return (a.name || '').localeCompare(b.name || '')
-    if (accountSort === 'tests') return (b.total_tests || 0) - (a.total_tests || 0)
+    if (accountSort === 'tests') {
+      const aCount = (tests || []).filter(t => t.clinic_id === a.id).length
+      const bCount = (tests || []).filter(t => t.clinic_id === b.id).length
+      return bCount - aCount
+    }
     if (accountSort === 'date') return new Date(b.created_at || 0) - new Date(a.created_at || 0)
     return 0
   })
@@ -571,7 +575,7 @@ function Accounts({ clinics, onRefresh, onSelect }) {
           <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: routeAccounts.includes(c.id) ? '2px solid #14b8a6' : '1px solid #1f2937' }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
-              <span className="badge" style={{ background: (c.total_tests || 0) > 0 ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(c.total_tests || 0) > 0 ? 'Active' : 'Inactive'}</span>
+              <span className="badge" style={{ background: (tests || []).some(t => t.clinic_id === c.id) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => t.clinic_id === c.id) ? 'Active' : 'Inactive'}</span>
             </div>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
