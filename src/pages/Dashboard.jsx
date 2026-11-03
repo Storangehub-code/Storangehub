@@ -170,6 +170,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps }) {
   return (
     <div>
       <p style={{ color: '#64748b', marginBottom: 20, fontSize: 14 }}>Data through {new Date().toLocaleDateString()}</p>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to {selectedReps.length} rep(s)</p></div>}
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
         <div className="kpi"><div className="kpi-value">{activeAccounts}</div><div className="kpi-label">Active Accounts</div><div className="kpi-change up">{clinics.length} total</div></div>
