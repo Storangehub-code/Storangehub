@@ -1453,14 +1453,26 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
     supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
   }, [])
+  const [editing, setEditing] = useState(null)
   async function createRep() {
     if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
     const full_name = form.first.trim() + ' ' + form.last.trim()
-    const { error } = await supabase.from('profiles').insert({ full_name, phone: form.phone, email: form.email, home_address: form.address, manager_id: form.manager_id || null, role: 'rep' })
+    const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, manager_id: form.manager_id || null, role: 'rep' }
+    let error
+    if (editing) {
+      ({ error } = await supabase.from('profiles').update(payload).eq('id', editing))
+    } else {
+      ({ error } = await supabase.from('profiles').insert(payload))
+    }
     if (error) return alert(error.message)
     setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' })
-    setShowCreate(false)
+    setEditing(null)
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
+  }
+  function startEdit(r) {
+    const parts = (r.full_name || '').split(' ')
+    setForm({ first: parts[0] || '', last: parts.slice(1).join(' ') || '', phone: r.phone || '', email: r.email || '', address: r.home_address || '', manager_id: r.manager_id || '' })
+    setEditing(r.id)
   }
   function toggle(id) {
     setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
@@ -1479,15 +1491,16 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
       </div>
       <div className="card">
         <table>
-          <thead><tr><th></th><th>Rep</th><th>Manager</th><th>Accounts</th><th>Tests</th></tr></thead>
+          <thead><tr><th></th><th>Rep</th><th>Manager</th><th>Accounts</th><th>Tests</th><th></th></tr></thead>
           <tbody>
             {reps.map(r => (
               <tr key={r.id}>
                 <td><input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} /></td>
                 <td style={{ color: '#14b8a6' }}>{r.full_name || '—'}</td>
-                <td>{r.manager_id ? '—' : '—'}</td>
+                <td>{managers.find(m => m.id === r.manager_id)?.full_name || '—'}</td>
                 <td>{clinics.filter(c => c.rep_id === r.id).length}</td>
                 <td>{tests.filter(t => clinics.some(c => c.id === t.clinic_id && c.rep_id === r.id)).length}</td>
+                <td><button className="btn secondary btn-sm" onClick={() => startEdit(r)}>Edit</button></td>
               </tr>
             ))}
           </tbody>
@@ -1499,7 +1512,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
         <button className="btn" onClick={applyFilter}>Filter</button>
       </div>
       <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>Create New Rep</h3>
+        <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Rep" : "Create New Rep"}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>First Name</label><input value={form.first} onChange={e => setForm({...form, first: e.target.value})} /></div>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Last Name</label><input value={form.last} onChange={e => setForm({...form, last: e.target.value})} /></div>
@@ -1513,7 +1526,8 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
             {managers.map(m => <option key={m.id} value={m.id}>{m.full_name}</option>)}
           </select>
         </div>
-        <div style={{ textAlign: 'right' }}><button className="btn" onClick={createRep}>Create Rep</button></div>
+        <div style={{ textAlign: 'right' }}><button className="btn" onClick={createRep}>{editing ? "Update Rep" : "Create Rep"}</button>
+          {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' }) }}>Cancel</button>}</div>
       </div>
     </div>
   )
