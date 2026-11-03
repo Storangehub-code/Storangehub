@@ -110,7 +110,7 @@ export default function Dashboard({ session }) {
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} />}
-        {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} />}
+        {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'notifications' && <Notifications items={notifications} />}
@@ -1431,7 +1431,7 @@ function Followups({ clinics }) {
   )
 }
 
-function RepsList({ selected, setSelected }) {
+function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
   const [reps, setReps] = useState([])
   
   const [filtered, setFiltered] = useState(false)
@@ -1462,8 +1462,8 @@ function RepsList({ selected, setSelected }) {
                 <td><input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} /></td>
                 <td style={{ color: '#14b8a6' }}>{r.full_name || '—'}</td>
                 <td>{r.manager_id ? '—' : '—'}</td>
-                <td>{Math.floor(Math.random() * 40)}</td>
-                <td>{Math.floor(Math.random() * 500)}</td>
+                <td>{clinics.filter(c => c.rep_id === r.id).length}</td>
+                <td>{tests.filter(t => clinics.some(c => c.id === t.clinic_id && c.rep_id === r.id)).length}</td>
               </tr>
             ))}
           </tbody>
