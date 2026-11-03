@@ -120,6 +120,7 @@ export default function Dashboard({ session }) {
 }
 
 function DashboardHome({ clinics, expenses, providers, tests, selectedReps }) {
+  const filtered = selectedReps?.length > 0
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
