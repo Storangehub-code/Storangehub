@@ -103,7 +103,7 @@ export default function Dashboard({ session }) {
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
-        {page === 'tests' && <Tests tests={tests} />}
+        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} expenses={expenses} providers={providers} />}
@@ -818,27 +818,57 @@ function ProviderDetail({ provider, onBack }) {
 }
 
 
-function Tests({ tests }) {
+function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) {
+  const [page, setPage] = useState(0)
+  const [startDate, setStartDate] = useState('')
+  const [endDate, setEndDate] = useState('')
+  const filtered = (tests || []).filter(t => {
+    if (!startDate && !endDate) return true
+    const d = new Date(t.collected_date || t.finalized_date || 0)
+    if (startDate && d < new Date(startDate)) return false
+    if (endDate && d > new Date(endDate)) return false
+    return true
+  })
+  const pageSize = 50
+  const pageData = filtered.slice(page * pageSize, (page + 1) * pageSize)
   return (
     <div>
+      <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
+        <label>From</label>
+        <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} />
+        <label>To</label>
+        <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} />
+        <span style={{ color: '#6b7280' }}>{filtered.length} tests</span>
+      </div>
       <div className="card">
         <table>
           <thead><tr><th>Date</th><th>Accession</th><th>Clinic</th><th>Provider</th><th>Test</th><th>Status</th></tr></thead>
           <tbody>
-            {tests.map(t => (
-              <tr key={t.id}>
-                <td>{t.collected || '—'}</td>
-                <td>{t.accession || '—'}</td>
-                <td>{t.clinics?.name || '—'}</td>
-                <td>{t.providers?.name || '—'}</td>
-                <td>{t.test_type || '—'}</td>
-                <td><span className="badge" style={{ background: t.finalized ? '#a7f3d0' : '#fef3c7', color: '#000' }}>{t.finalized ? 'Finalized' : 'Pending'}</span></td>
-              </tr>
-            ))}
+            {pageData.map(t => {
+              const clinic = clinics.find(c => c.id === t.clinic_id)
+              const provider = providers.find(p => p.id === t.provider_id)
+              return (
+                <tr key={t.id}>
+                  <td>{t.collected_date || '—'}</td>
+                  <td>{t.accession || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => clinic && onSelectClinic(clinic)}>{clinic?.name || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => provider && onSelectProvider(provider)}>{provider ? formatName(provider.name) : '—'}</td>
+                  <td>{t.test_type || '—'}</td>
+                  <td><span className="badge" style={{ background: t.finalized_date ? '#a7f3d0' : '#fef3c7', color: '#000' }}>{t.finalized_date ? 'Finalized' : 'Pending'}</span></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
-        {!tests.length && <p style={{ color: '#6b7280', padding: 12 }}>No tests yet.</p>}
+        {!pageData.length && <p style={{ color: '#6b7280', padding: 12 }}>No tests yet.</p>}
       </div>
+      {filtered.length > pageSize && (
+        <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+          <button className="btn btn-secondary btn-sm" onClick={() => setPage(Math.max(0, page - 1))} disabled={page === 0}>←</button>
+          <span style={{ padding: '4px 8px' }}>{page * pageSize + 1}-{Math.min((page + 1) * pageSize, filtered.length)} of {filtered.length}</span>
+          <button className="btn btn-secondary btn-sm" onClick={() => setPage(page + 1)} disabled={(page + 1) * pageSize >= filtered.length}>→</button>
+        </div>
+      )}
     </div>
   )
 }
