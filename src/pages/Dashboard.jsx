@@ -1347,8 +1347,7 @@ function Followups({ clinics }) {
   const upcoming = [...followups].sort((a, b) => a.date.localeCompare(b.date))
 
   return (
-    <div>
-      
+    <>
       <div className="card" style={{ marginBottom: 16 }}>
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
             <button className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setViewMonth(new Date(viewMonth.getFullYear(), viewMonth.getMonth() - 1, 1))}>←</button>
@@ -1422,7 +1421,7 @@ function Followups({ clinics }) {
           </div>
         </div>
       )}
-    </div>
+    </>
   )
 }
 
