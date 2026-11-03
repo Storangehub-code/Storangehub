@@ -150,7 +150,7 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
   // Top providers by test count
   const providerCounts = {}
   ;(tests || []).forEach(t => { if (t.provider_id) providerCounts[t.provider_id] = (providerCounts[t.provider_id] || 0) + 1 })
-  const topProviders = Object.entries(providerCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, count]) => {
+  const topProviders = Object.entries(providerCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, count]) => {
     const p = providers.find(pr => pr.id === id)
     return { name: p?.name || 'Unknown', count }
   })
@@ -197,7 +197,7 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Top Providers</h3>
-          {topProviders.slice(0, 5).map((p, i) => (
+          {topProviders.map((p, i) => (
             <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
               <span style={{ color: '#14b8a6' }}>{formatName(p.name)}</span><span>{p.count}</span>
             </div>
