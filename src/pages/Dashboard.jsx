@@ -965,9 +965,14 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ New Expense</button>
-        <span style={{ fontWeight: 600, fontSize: 18 }}>${total.toLocaleString()}</span>
+        <button className="btn">Submit Selected</button>
+        <button className="btn secondary">Past Expenses</button>
+      </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <h3>My Expenses</h3>
+        <span style={{ fontWeight: 600 }}>Month Total: ${total.toLocaleString()}</span>
       </div>
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -1093,7 +1098,7 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
       )}
       <div className="card">
         <table>
-          <thead><tr><th>Date</th><th>Business</th><th>Type</th><th>Amount</th><th>Status</th><th>Actions</th></tr></thead>
+          <thead><tr><th></th><th>Date</th><th>Business</th><th>Type</th><th>Amount</th><th>Account</th><th>Status</th></tr></thead>
           <tbody>
             {expenses.map(e => (
               <tr key={e.id}>
