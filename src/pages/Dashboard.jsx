@@ -58,6 +58,7 @@ export default function Dashboard({ session }) {
     ...(role === 'global_admin' ? [{ id: 'approve', label: 'Approve Accounts' }] : []),
     { id: 'providers', label: 'Providers' },
     ...(role === 'manager' || role === 'global_admin' ? [{ id: 'reps', label: 'Reps' }] : []),
+    ...(role === 'global_admin' ? [{ id: 'managers', label: 'Managers' }] : []),
     { id: 'tests', label: 'Tests' },
     { id: 'expenses', label: 'Expenses' },
     { id: 'reports', label: 'Reports' },
@@ -111,6 +112,7 @@ export default function Dashboard({ session }) {
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} />}
+          {page === 'managers' && <ManagersList />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
         {page === 'notifications' && <Notifications items={notifications} />}
@@ -1553,6 +1555,95 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
         </div>
         <div style={{ textAlign: 'right' }}><button className="btn" onClick={createRep}>{editing ? "Update Rep" : "Create Rep"}</button>
           {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' }) }}>Cancel</button>}</div>
+      </div>
+    </div>
+  )
+}
+
+
+function ManagersList() {
+  const [managers, setManagers] = useState([])
+  const [reps, setReps] = useState([])
+  const [form, setForm] = useState({ first: '', last: '', phone: '', email: '' })
+  const [editing, setEditing] = useState(null)
+  const [assigning, setAssigning] = useState(null)
+  useEffect(() => {
+    supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
+    supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
+  }, [])
+  async function createManager() {
+    if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
+    const full_name = form.first.trim() + ' ' + form.last.trim()
+    const payload = { full_name, phone: form.phone, email: form.email, role: 'manager' }
+    let error
+    if (editing) {
+      ({ error } = await supabase.from('profiles').update(payload).eq('id', editing))
+    } else {
+      ({ error } = await supabase.from('profiles').insert(payload))
+    }
+    if (error) return alert(error.message)
+    setForm({ first: '', last: '', phone: '', email: '' })
+    setEditing(null)
+    supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
+  }
+  function startEdit(m) {
+    const parts = (m.full_name || '').split(' ')
+    setForm({ first: parts[0] || '', last: parts.slice(1).join(' ') || '', phone: m.phone || '', email: m.email || '' })
+    setEditing(m.id)
+    setTimeout(() => document.getElementById('mgr-form')?.scrollIntoView({ behavior: 'smooth' }), 50)
+  }
+  async function assignRep(repId, managerId) {
+    await supabase.from('profiles').update({ manager_id: managerId }).eq('id', repId)
+    supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
+  }
+  return (
+    <div>
+      <div style={{ marginBottom: 16 }}>
+        <h2 style={{ marginBottom: 4 }}>Managers</h2>
+        <p style={{ color: '#6b7280', fontSize: 13 }}>Create managers and assign reps</p>
+      </div>
+      <div className="card">
+        <table>
+          <thead><tr><th>Manager</th><th>Email</th><th>Reps</th><th></th></tr></thead>
+          <tbody>
+            {managers.map(m => (
+              <tr key={m.id}>
+                <td style={{ color: '#14b8a6' }}>{m.full_name || '—'}</td>
+                <td>{m.email || '—'}</td>
+                <td>{reps.filter(r => r.manager_id === m.id).length}</td>
+                <td>
+                  <button className="btn secondary btn-sm" onClick={() => startEdit(m)}>Edit</button>
+                  <button className="btn secondary btn-sm" style={{ marginLeft: 4 }} onClick={() => setAssigning(assigning === m.id ? null : m.id)}>Assign</button>
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        {!managers.length && <p style={{ color: '#6b7280' }}>No managers yet.</p>}
+      </div>
+      {assigning && (
+        <div className="card" style={{ marginTop: 12 }}>
+          <h3 style={{ marginBottom: 8 }}>Assign Reps to {managers.find(m => m.id === assigning)?.full_name}</h3>
+          {reps.map(r => (
+            <label key={r.id} style={{ display: 'block', marginBottom: 4 }}>
+              <input type="checkbox" checked={r.manager_id === assigning} onChange={() => assignRep(r.id, r.manager_id === assigning ? null : assigning)} />
+              <span style={{ marginLeft: 8 }}>{r.full_name}</span>
+            </label>
+          ))}
+        </div>
+      )}
+      <div className="card" id="mgr-form" style={{ marginTop: 16 }}>
+        <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Manager" : "Create New Manager"}</h3>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
+          <div><label style={{ fontSize: 13, color: '#9ca3af' }}>First Name</label><input value={form.first} onChange={e => setForm({...form, first: e.target.value})} /></div>
+          <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Last Name</label><input value={form.last} onChange={e => setForm({...form, last: e.target.value})} /></div>
+          <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Phone</label><input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
+          <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Email</label><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
+        </div>
+        <div style={{ textAlign: 'right' }}>
+          <button className="btn" onClick={createManager}>{editing ? "Update Manager" : "Create Manager"}</button>
+          {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '' }) }}>Cancel</button>}
+        </div>
       </div>
     </div>
   )
