@@ -824,7 +824,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
   const [endDate, setEndDate] = useState('')
   const filtered = (tests || []).filter(t => {
     if (!startDate && !endDate) return true
-    const d = new Date(t.collected_date || t.finalized_date || 0)
+    const d = new Date(t.collected_date || t.collected || t.finalized_date || t.finalized || 0)
     if (startDate && d < new Date(startDate)) return false
     if (endDate && d > new Date(endDate)) return false
     return true
@@ -849,7 +849,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
               const provider = providers.find(p => p.id === t.provider_id)
               return (
                 <tr key={t.id}>
-                  <td>{t.collected_date || '—'}</td>
+                  <td>{t.collected_date || t.collected || '—'}</td>
                   <td>{t.accession || '—'}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => clinic && onSelectClinic(clinic)}>{clinic?.name || '—'}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => provider && onSelectProvider(provider)}>{provider ? formatName(provider.name) : '—'}</td>
