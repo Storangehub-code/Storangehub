@@ -849,6 +849,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
         <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} />
         <label>To</label>
         <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} />
+        <button className="btn btn-secondary btn-sm" onClick={() => { setStartDate(''); setEndDate(''); setPage(0) }}>Reset</button>
         <span style={{ color: '#6b7280' }}>{filtered.length} tests</span>
       </div>
       <div className="card">
