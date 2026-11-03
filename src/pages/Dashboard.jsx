@@ -106,7 +106,7 @@ export default function Dashboard({ session }) {
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
-        {page === 'reports' && <Reports clinics={clinics} expenses={expenses} providers={providers} />}
+        {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'notifications' && <Notifications items={notifications} />}
         {page === 'followups' && <Followups clinics={clinics} />}
         {page === 'training' && <Training role={role} />}
@@ -1126,60 +1126,115 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
   )
 }
 
-function Reports({ clinics, expenses, providers }) {
-  const byType = {}
-  expenses.forEach(e => { byType[e.exp_type] = (byType[e.exp_type] || 0) + parseFloat(e.amount || 0) })
-  const byStatus = {}
-  expenses.forEach(e => { byStatus[e.status] = (byStatus[e.status] || 0) + 1 })
+function Reports({ clinics, tests, providers, onSelectClinic, onSelectProvider }) {
+  const [activeAccountsPage, setActiveAccountsPage] = useState(0)
+  const [activeProvidersPage, setActiveProvidersPage] = useState(0)
+  const [inactiveAccountsPage, setInactiveAccountsPage] = useState(0)
+  const [inactiveProvidersPage, setInactiveProvidersPage] = useState(0)
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
+  const monthCounts = months.map(m => {
+    const monthNum = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m) + 1
+    return (tests || []).filter(t => {
+      const d = new Date(t.collected_date || t.collected || 0)
+      return d.getMonth() + 1 === monthNum
+    }).length
+  })
+  const maxCount = Math.max(...monthCounts, 1)
+
+  const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+    const aCount = (tests || []).filter(t => t.clinic_id === a.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
+    const bCount = (tests || []).filter(t => t.clinic_id === b.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
+    return bCount - aCount
+  })
+  const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+    const aCount = (tests || []).filter(t => t.provider_id === a.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
+    const bCount = (tests || []).filter(t => t.provider_id === b.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
+    return bCount - aCount
+  })
+  const inactiveAccounts = clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+    const aCount = (tests || []).filter(t => t.clinic_id === a.id).length
+    const bCount = (tests || []).filter(t => t.clinic_id === b.id).length
+    return bCount - aCount
+  })
+  const inactiveProviders = providers.filter(p => !(tests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+    const aCount = (tests || []).filter(t => t.provider_id === a.id).length
+    const bCount = (tests || []).filter(t => t.provider_id === b.id).length
+    return bCount - aCount
+  })
 
   return (
     <div>
-    <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Monthly Volume</h3>
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: 120, gap: 8 }}>
-            {['Apr','May','Jun','Jul','Aug','Sep','Oct'].map((m, i) => (
-              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ height: `${30 + i * 12}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
-                <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
-              </div>
-            ))}
-          </div>
-        </div>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Tests by Panel</h3>
-          <div style={{ fontSize: 13 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#0d9488' }}>●</span> UTI</span><span>48%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#14b8a6' }}>●</span> Wound</span><span>32%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#5eead4' }}>●</span> SynoviFact</span><span>12%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><span style={{ color: '#99f6e4' }}>●</span> Other</span><span>8%</span></div>
-          </div>
-        </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-      <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Expenses by Type</h3>
-        {Object.entries(byType).sort((a, b) => b[1] - a[1]).map(([type, amt]) => (
-          <div key={type} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #1f2937' }}>
-            <span>{type}</span><span style={{ fontWeight: 600 }}>${amt.toLocaleString()}</span>
-          </div>
-        ))}
-        {!Object.keys(byType).length && <p style={{ color: '#6b7280' }}>No expenses yet.</p>}
-      </div>
-      <div className="card">
-        <h3 style={{ marginBottom: 12 }}>Summary</h3>
-        <p style={{ marginBottom: 8 }}>Total Accounts: <strong>{clinics.length}</strong></p>
-        <p style={{ marginBottom: 8 }}>Total Providers: <strong>{providers.length}</strong></p>
-        <p style={{ marginBottom: 8 }}>Total Expenses: <strong>${expenses.reduce((s, e) => s + parseFloat(e.amount || 0), 0).toLocaleString()}</strong></p>
-        <div style={{ marginTop: 16 }}>
-          {Object.entries(byStatus).map(([status, count]) => (
-            <div key={status} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0' }}>
-              <span>{status}</span><span>{count}</span>
+      <div className="card" style={{ marginBottom: 16 }}>
+        <h3 style={{ marginBottom: 12 }}>Total Sample Volume — Last 6 Months</h3>
+        <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
+          {months.map((m, i) => (
+            <div key={m} style={{ flex: 1, textAlign: 'center' }}>
+              <div style={{ fontSize: 12, marginBottom: 4 }}>{monthCounts[i]}</div>
+              <div style={{ height: `${(monthCounts[i] / maxCount) * 100}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
+              <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
             </div>
           ))}
         </div>
       </div>
-    </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Active Accounts</h3>
+          <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>At least one provider sent in last 30 days</p>
+          {activeAccounts.slice(activeAccountsPage * 10, (activeAccountsPage + 1) * 10).map(c => (
+            <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectClinic(c)}>{c.name}</div>
+          ))}
+          {activeAccounts.length > 10 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setActiveAccountsPage(Math.max(0, activeAccountsPage - 1))} disabled={activeAccountsPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{activeAccountsPage * 10 + 1}-{Math.min((activeAccountsPage + 1) * 10, activeAccounts.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setActiveAccountsPage(activeAccountsPage + 1)} disabled={(activeAccountsPage + 1) * 10 >= activeAccounts.length}>→</button>
+            </div>
+          )}
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Active Providers</h3>
+          <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>Sent in last 30 days</p>
+          {activeProviders.slice(activeProvidersPage * 10, (activeProvidersPage + 1) * 10).map(p => (
+            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectProvider(p)}>{formatName(p.name)}</div>
+          ))}
+          {activeProviders.length > 10 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setActiveProvidersPage(Math.max(0, activeProvidersPage - 1))} disabled={activeProvidersPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{activeProvidersPage * 10 + 1}-{Math.min((activeProvidersPage + 1) * 10, activeProviders.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setActiveProvidersPage(activeProvidersPage + 1)} disabled={(activeProvidersPage + 1) * 10 >= activeProviders.length}>→</button>
+            </div>
+          )}
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Accounts Gone Inactive</h3>
+          <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>No tests in last 30 days</p>
+          {inactiveAccounts.slice(inactiveAccountsPage * 10, (inactiveAccountsPage + 1) * 10).map(c => (
+            <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectClinic(c)}>{c.name}</div>
+          ))}
+          {inactiveAccounts.length > 10 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setInactiveAccountsPage(Math.max(0, inactiveAccountsPage - 1))} disabled={inactiveAccountsPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{inactiveAccountsPage * 10 + 1}-{Math.min((inactiveAccountsPage + 1) * 10, inactiveAccounts.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setInactiveAccountsPage(inactiveAccountsPage + 1)} disabled={(inactiveAccountsPage + 1) * 10 >= inactiveAccounts.length}>→</button>
+            </div>
+          )}
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Providers Gone Inactive</h3>
+          <p style={{ color: '#6b7280', fontSize: 13, marginBottom: 8 }}>No tests in last 30 days</p>
+          {inactiveProviders.slice(inactiveProvidersPage * 10, (inactiveProvidersPage + 1) * 10).map(p => (
+            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectProvider(p)}>{formatName(p.name)}</div>
+          ))}
+          {inactiveProviders.length > 10 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 8 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setInactiveProvidersPage(Math.max(0, inactiveProvidersPage - 1))} disabled={inactiveProvidersPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{inactiveProvidersPage * 10 + 1}-{Math.min((inactiveProvidersPage + 1) * 10, inactiveProviders.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setInactiveProvidersPage(inactiveProvidersPage + 1)} disabled={(inactiveProvidersPage + 1) * 10 >= inactiveProviders.length}>→</button>
+            </div>
+          )}
+        </div>
+      </div>
     </div>
   )
 }
