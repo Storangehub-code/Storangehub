@@ -117,45 +117,49 @@ export default function Dashboard({ session }) {
 }
 
 function DashboardHome({ clinics, expenses, providers, tests }) {
-  const totalExp = expenses.reduce((s, e) => s + (parseFloat(e.amount) || 0), 0)
-  const totalTests = clinics.reduce((s, c) => s + (c.total_tests || 0), 0)
-  const activeAccounts = clinics.filter(c => (c.total_tests || 0) > 0).length
+  const totalTests = (tests || []).length
+  const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id)).length
+  const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id)).length
+  const needAttention = clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length
+  
+  // Count tests by type
+  const testCounts = {}
+  ;(tests || []).forEach(t => { testCounts[t.test_type] = (testCounts[t.test_type] || 0) + 1 })
+  const topTests = Object.entries(testCounts).sort((a, b) => b[1] - a[1]).slice(0, 4)
+  
+  // Top providers by test count
+  const providerCounts = {}
+  ;(tests || []).forEach(t => { if (t.provider_id) providerCounts[t.provider_id] = (providerCounts[t.provider_id] || 0) + 1 })
+  const topProviders = Object.entries(providerCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([id, count]) => {
+    const p = providers.find(pr => pr.id === id)
+    return { name: p?.name || 'Unknown', count }
+  })
+  
+  // Top accounts by test count
+  const accountCounts = {}
+  ;(tests || []).forEach(t => { if (t.clinic_id) accountCounts[t.clinic_id] = (accountCounts[t.clinic_id] || 0) + 1 })
+  const topAccounts = Object.entries(accountCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, count]) => {
+    const c = clinics.find(cl => cl.id === id)
+    return { name: c?.name || 'Unknown', count }
+  })
+
   return (
     <div>
       <p style={{ color: '#64748b', marginBottom: 20, fontSize: 14 }}>Data through {new Date().toLocaleDateString()}</p>
       <div className="kpi-grid">
-        <div className="kpi">
-          <div className="kpi-value">{totalTests.toLocaleString()}</div>
-          <div className="kpi-label">Tests</div>
-          <div className="kpi-change up">↑ Active tracking</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-value">{clinics.length}</div>
-          <div className="kpi-label">Accounts</div>
-          <div className="kpi-change up">{activeAccounts} active</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-value">{providers.length}</div>
-          <div className="kpi-label">Providers</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-value">${(totalTests * 125).toLocaleString()}</div>
-          <div className="kpi-label">Est. Revenue</div>
-          <div className="kpi-change up">$125/test</div>
-        </div>
-        <div className="kpi">
-          <div className="kpi-value" style={{ color: clinics.length - activeAccounts > 0 ? '#ef4444' : '#10b981' }}>{clinics.length - activeAccounts}</div>
-          <div className="kpi-label">Need Attention</div>
-          <div className="kpi-change down">No recent tests</div>
-        </div>
+        <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
+        <div className="kpi"><div className="kpi-value">{activeAccounts}</div><div className="kpi-label">Active Accounts</div><div className="kpi-change up">{clinics.length} total</div></div>
+        <div className="kpi"><div className="kpi-value">{providers.length}</div><div className="kpi-label">Providers</div></div>
+        <div className="kpi"><div className="kpi-value">${(totalTests * 125).toLocaleString()}</div><div className="kpi-label">Est. Revenue</div><div className="kpi-change up">$125/test</div></div>
+        <div className="kpi"><div className="kpi-value" style={{ color: needAttention > 0 ? '#ef4444' : '#10b981' }}>{needAttention}</div><div className="kpi-label">Need Attention</div><div className="kpi-change down">No recent tests</div></div>
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Monthly Volume</h3>
-          <div style={{ display: 'flex', alignItems: 'flex-end', height: 120, gap: 8 }}>
+          <h3 style={{ marginBottom: 12 }}>Monthly Testing Volume</h3>
+          <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
             {['Apr','May','Jun','Jul','Aug','Sep','Oct'].map((m, i) => (
               <div key={m} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ height: `${30 + i * 12}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
+                <div style={{ height: `${40 + i * 15}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
               </div>
             ))}
@@ -163,54 +167,66 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Tests by Panel</h3>
-          <div style={{ fontSize: 13 }}>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#0d9488' }}>●</span> UTI</span><span>48%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#14b8a6' }}>●</span> Wound</span><span>32%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 6 }}><span><span style={{ color: '#5eead4' }}>●</span> SynoviFact</span><span>12%</span></div>
-            <div style={{ display: 'flex', justifyContent: 'space-between' }}><span><span style={{ color: '#99f6e4' }}>●</span> Other</span><span>8%</span></div>
-          </div>
+          {topTests.map(([type, count]) => (
+            <div key={type} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
+              <span>{type}</span><span style={{ fontWeight: 600 }}>{count}</span>
+            </div>
+          ))}
+          {!topTests.length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
         </div>
-      </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Top Providers</h3>
-          {providers.slice(0, 5).map(p => (
-            <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{formatName(p.name)}</span><span style={{ color: '#6b7280' }}>{p.samples || 0}</span>
+          {topProviders.slice(0, 5).map((p, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
+              <span style={{ color: '#14b8a6' }}>{formatName(p.name)}</span><span>{p.count}</span>
             </div>
           ))}
-          {!providers.length && <p style={{ color: '#6b7280' }}>No providers yet</p>}
+          {!topProviders.length && <p style={{ color: '#6b7280' }}>No data yet</p>}
+        </div>
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr', gap: 16, marginBottom: 16 }}>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Recent Testing Activity</h3>
+          <table style={{ fontSize: 13 }}>
+            <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Practice</th></tr></thead>
+            <tbody>
+              {(tests || []).slice(0, 10).map(t => (
+                <tr key={t.id}>
+                  <td>{t.accession}</td>
+                  <td>{t.collected || '—'}</td>
+                  <td style={{ color: '#14b8a6' }}>{t.test_type}</td>
+                  <td>{t.clinics?.name || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
         </div>
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Top Accounts</h3>
-          {clinics.slice(0, 5).map(c => (
+          <h3 style={{ marginBottom: 12 }}>Accounts Needing Attention</h3>
+          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).slice(0, 5).map(c => (
             <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{c.name}</span><span style={{ color: '#6b7280', fontSize: 13 }}>{c.city || c.type}</span>
-            </div>
-          ))}
-          {!clinics.length && <p style={{ color: '#6b7280' }}>No accounts yet</p>}
-        </div>
-        <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Expense Status</h3>
-          {['Ready', 'Submitted', 'Approved', 'Denied'].map(status => (
-            <div key={status} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{status}</span>
-              <span className={`badge badge-${status.toLowerCase()}`}>{expenses.filter(e => e.status === status).length}</span>
+              <span style={{ color: '#14b8a6' }}>{c.name}</span><span style={{ color: '#ef4444' }}>30+</span>
             </div>
           ))}
         </div>
       </div>
-      <div className="card" style={{ marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>Recent Tests</h3>
-        <div style={{ display: 'flex', gap: 12, overflowX: 'auto', paddingBottom: 8 }}>
-          {(tests || []).slice(0, 10).map(t => (
-            <div key={t.id} style={{ minWidth: 200, padding: 12, background: '#0f172a', borderRadius: 8, flexShrink: 0 }}>
-              <div style={{ fontWeight: 600, fontSize: 13 }}>{t.clinics?.name || 'Unknown'}</div>
-              <div style={{ color: '#14b8a6', fontSize: 12 }}>{t.test_type || 'Test'}</div>
-              <div style={{ color: '#9ca3af', fontSize: 11, marginTop: 4 }}>{t.collected || '—'}</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Top Performing Accounts</h3>
+          {topAccounts.map((a, i) => (
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
+              <span style={{ color: '#14b8a6' }}>{a.name}</span><span>{a.count}</span>
             </div>
           ))}
-          {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests yet.</p>}
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
+          <p style={{ color: '#6b7280' }}>Coming soon</p>
+        </div>
+        <div className="card">
+          <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
+          <p style={{ color: '#6b7280' }}>Coming soon</p>
         </div>
       </div>
     </div>
