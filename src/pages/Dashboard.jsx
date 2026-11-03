@@ -214,7 +214,7 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
               {(tests || []).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
-                  <td>{t.collected || '—'}</td>
+                  <td>{formatDate(t.collected)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type}</td>
                   <td>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
@@ -504,6 +504,17 @@ Supplies Requested:
 }
 
 
+
+function formatDate(d) {
+  if (!d) return '—'
+  const date = new Date(d)
+  if (isNaN(date)) return d
+  const m = String(date.getMonth() + 1).padStart(2, '0')
+  const day = String(date.getDate()).padStart(2, '0')
+  const y = date.getFullYear()
+  return m + '-' + day + '-' + y
+}
+
 function formatPhone(p) {
   if (!p) return '—'
   const n = String(p).replace(/[^0-9]/g, '')
@@ -730,7 +741,7 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <tbody>
               {(tests || []).map(t => (
                 <tr key={t.id}>
-                  <td>{t.collected || '—'}</td>
+                  <td>{formatDate(t.collected)}</td>
                   <td>{t.accession || '—'}</td>
                   <td>{t.test_type || '—'}</td>
                   <td><span className="badge" style={{ background: t.finalized ? '#a7f3d0' : '#fef3c7', color: '#000' }}>{t.finalized ? 'Finalized' : 'Pending'}</span></td>
@@ -822,7 +833,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
   const [page, setPage] = useState(0)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const filtered = (tests || []).filter(t => {
+  const filtered = [...(tests || [])].sort((a, b) => new Date(b.collected_date || b.collected || 0) - new Date(a.collected_date || a.collected || 0)).filter(t => {
     if (!startDate && !endDate) return true
     const d = new Date(t.collected_date || t.collected || t.finalized_date || t.finalized || 0)
     if (startDate && d < new Date(startDate)) return false
@@ -849,7 +860,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
               const provider = providers.find(p => p.id === t.provider_id)
               return (
                 <tr key={t.id}>
-                  <td>{t.collected_date || t.collected || '—'}</td>
+                  <td>{formatDate(t.collected_date || t.collected)}</td>
                   <td>{t.accession || '—'}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => clinic && onSelectClinic(clinic)}>{clinic?.name || '—'}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => provider && onSelectProvider(provider)}>{provider ? formatName(provider.name) : '—'}</td>
