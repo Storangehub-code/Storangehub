@@ -503,13 +503,28 @@ Supplies Requested:
   )
 }
 
+
+function formatPhone(p) {
+  if (!p) return '—'
+  const n = String(p).replace(/[^0-9]/g, '')
+  if (n.length === 10) return n.slice(0,3) + '-' + n.slice(3,6) + '-' + n.slice(6)
+  if (n.length === 11 && n[0] === '1') return n.slice(1,4) + '-' + n.slice(4,7) + '-' + n.slice(7)
+  return n || '—'
+}
+
 function Accounts({ clinics, onRefresh, onSelect }) {
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
+  const [accountSort, setAccountSort] = useState('az')
   const [routeMode, setRouteMode] = useState(false)
   const [routeAccounts, setRouteAccounts] = useState([])
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
-  const filtered = clinics.filter(c => c.name.toLowerCase().includes(search.toLowerCase()))
+  const filtered = [...clinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
+    if (accountSort === 'az') return (a.name || '').localeCompare(b.name || '')
+    if (accountSort === 'tests') return (b.total_tests || 0) - (a.total_tests || 0)
+    if (accountSort === 'date') return new Date(b.created_at || 0) - new Date(a.created_at || 0)
+    return 0
+  })
 
   async function addClinic() {
     if (!form.name.trim()) return
@@ -525,6 +540,11 @@ function Accounts({ clinics, onRefresh, onSelect }) {
         <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button>
         <button className="btn secondary" onClick={() => setRouteMode(!routeMode)}>{routeMode ? 'Cancel Route' : 'Build Route'}</button>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts..." style={{ flex: 1, maxWidth: 280 }} />
+        <select className="form-input" style={{ width: 160 }} onChange={(e) => setAccountSort(e.target.value)} value={accountSort || 'az'}>
+          <option value="az">A-Z</option>
+          <option value="tests">Total Tests</option>
+          <option value="date">Date Added</option>
+        </select>
       </div>
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -553,9 +573,9 @@ function Accounts({ clinics, onRefresh, onSelect }) {
               <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
               <span className="badge" style={{ background: (c.total_tests || 0) > 0 ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(c.total_tests || 0) > 0 ? 'Active' : 'Inactive'}</span>
             </div>
-            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.type || '—'}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
-            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.phone || '—'}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{formatPhone(c.phone)}</p>
           </div>
         ))}
       </div>
@@ -815,6 +835,7 @@ function Tests({ tests }) {
 
 function Providers({ providers, onSelect }) {
   const [search, setSearch] = useState('')
+  const [accountSort, setAccountSort] = useState('az')
   const [routeMode, setRouteMode] = useState(false)
   const [routeAccounts, setRouteAccounts] = useState([])
   const filtered = providers.filter(p => p.name.toLowerCase().includes(search.toLowerCase()))
