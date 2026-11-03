@@ -21,6 +21,7 @@ export default function Dashboard({ session }) {
   const [page, setPage] = useState('dashboard')
   const [selectedClinic, setSelectedClinic] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
+  const [selectedReps, setSelectedReps] = useState([])
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) loadData() }, [profile])
@@ -95,18 +96,18 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         
-        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} />}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
-        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} />}
+        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
-        {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} />}
-        {page === 'reps' && <RepsList />}
+        {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} />}
+        {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
         {page === 'notifications' && <Notifications items={notifications} />}
@@ -118,7 +119,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ clinics, expenses, providers, tests }) {
+function DashboardHome({ clinics, expenses, providers, tests, selectedReps }) {
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
@@ -1422,9 +1423,9 @@ function Followups({ clinics }) {
   )
 }
 
-function RepsList() {
+function RepsList({ selected, setSelected }) {
   const [reps, setReps] = useState([])
-  const [selected, setSelected] = useState([])
+  
   const [filtered, setFiltered] = useState(false)
   useEffect(() => {
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
@@ -1437,8 +1438,6 @@ function RepsList() {
   }
   function applyFilter() {
     setFiltered(true)
-    // In a real app this would filter the dashboard data
-    alert('Filter applied for ' + selected.length + ' reps')
   }
   return (
     <div>
