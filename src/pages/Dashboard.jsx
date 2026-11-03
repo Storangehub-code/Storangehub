@@ -1473,6 +1473,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
     const parts = (r.full_name || '').split(' ')
     setForm({ first: parts[0] || '', last: parts.slice(1).join(' ') || '', phone: r.phone || '', email: r.email || '', address: r.home_address || '', manager_id: r.manager_id || '' })
     setEditing(r.id)
+    setTimeout(() => document.getElementById('rep-form')?.scrollIntoView({ behavior: 'smooth' }), 50)
   }
   function toggle(id) {
     setSelected(selected.includes(id) ? selected.filter(x => x !== id) : [...selected, id])
@@ -1511,7 +1512,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
         <button className="btn secondary" onClick={selectAll}>Select All</button>
         <button className="btn" onClick={applyFilter}>Filter</button>
       </div>
-      <div className="card" style={{ marginTop: 16 }}>
+      <div className="card" id="rep-form" style={{ marginTop: 16 }}>
         <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Rep" : "Create New Rep"}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>First Name</label><input value={form.first} onChange={e => setForm({...form, first: e.target.value})} /></div>
