@@ -101,18 +101,18 @@ export default function Dashboard({ session }) {
         
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
-        {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} />}
+        {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
-        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} />}
+        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
-        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
-        {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} />}
+        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
+        {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
-        {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
+        {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
         {page === 'notifications' && <Notifications items={notifications} />}
         {page === 'followups' && <Followups clinics={clinics} />}
         {page === 'training' && <Training role={role} />}
@@ -346,13 +346,14 @@ function ApproveAccounts({ clinics, onRefresh }) {
   )
 }
 
-function Prospects({ clinics, onRefresh, onSelect }) {
+function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [] }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const [ordering, setOrdering] = useState(null)
   const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0 })
-  const prospects = clinics.filter(c => c.is_prospect)
+  const allProspects = clinics.filter(c => c.is_prospect)
+  const prospects = selectedReps?.length > 0 ? allProspects.filter(c => selectedReps.includes(c.rep_id)) : allProspects
 
   async function addProspect() {
     if (!form.name.trim()) return
@@ -455,6 +456,7 @@ Supplies Requested:
 
   return (
     <div>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <button className="btn" onClick={() => setShowAdd(!showAdd)} style={{ marginBottom: 16 }}>+ Add Prospect</button>
       {showAdd && (
         <div className="card" style={{ marginBottom: 16 }}>
@@ -534,14 +536,15 @@ function formatPhone(p) {
   return n || '—'
 }
 
-function Accounts({ clinics, tests, onRefresh, onSelect }) {
+function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps = [] }) {
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
   const [accountSort, setAccountSort] = useState('az')
   const [routeMode, setRouteMode] = useState(false)
   const [routeAccounts, setRouteAccounts] = useState([])
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
-  const filtered = [...clinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
+  const baseClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
+  const filtered = [...baseClinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
     if (accountSort === 'az') return (a.name || '').localeCompare(b.name || '')
     if (accountSort === 'tests') {
       const aCount = (tests || []).filter(t => t.clinic_id === a.id).length
@@ -562,6 +565,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect }) {
 
   return (
     <div>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button>
         <button className="btn secondary" onClick={() => setRouteMode(!routeMode)}>{routeMode ? 'Cancel Route' : 'Build Route'}</button>
@@ -840,11 +844,12 @@ function ProviderDetail({ provider, onBack }) {
 }
 
 
-function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) {
+function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider, selectedReps = [], reps = [] }) {
   const [page, setPage] = useState(0)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
-  const filtered = [...(tests || [])].sort((a, b) => new Date(b.collected_date || b.collected || 0) - new Date(a.collected_date || a.collected || 0)).filter(t => {
+  const baseTests = selectedReps?.length > 0 ? (tests || []).filter(t => clinics.some(c => c.id === t.clinic_id && selectedReps.includes(c.rep_id))) : (tests || [])
+  const filtered = [...baseTests].sort((a, b) => new Date(b.collected_date || b.collected || 0) - new Date(a.collected_date || a.collected || 0)).filter(t => {
     if (!startDate && !endDate) return true
     const d = new Date(t.collected_date || t.collected || t.finalized_date || t.finalized || 0)
     if (startDate && d < new Date(startDate)) return false
@@ -855,6 +860,7 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
   const pageData = filtered.slice(page * pageSize, (page + 1) * pageSize)
   return (
     <div>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center' }}>
         <label>From</label>
         <input type="date" value={startDate} onChange={e => { setStartDate(e.target.value); setPage(0) }} />
@@ -896,10 +902,11 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider }) 
   )
 }
 
-function Providers({ providers, clinics, tests, onSelect, onSelectClinic }) {
+function Providers({ providers, clinics, tests, onSelect, onSelectClinic, selectedReps = [], reps = [] }) {
   const [search, setSearch] = useState('')
   const [sortBy, setSortBy] = useState('volume')
-  const filtered = [...providers].filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
+  const baseProviders = selectedReps?.length > 0 ? providers.filter(p => clinics.some(c => c.id === p.clinic_id && selectedReps.includes(c.rep_id))) : providers
+  const filtered = [...baseProviders].filter(p => p.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
     if (sortBy === 'az') return (a.name || '').localeCompare(b.name || '')
     const aCount = (tests || []).filter(t => t.provider_id === a.id).length
     const bCount = (tests || []).filter(t => t.provider_id === b.id).length
@@ -907,6 +914,7 @@ function Providers({ providers, clinics, tests, onSelect, onSelectClinic }) {
   })
   return (
     <div>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search providers..." style={{ maxWidth: 280 }} />
         <select className="form-input" style={{ width: 160 }} onChange={(e) => setSortBy(e.target.value)} value={sortBy}>
@@ -1137,38 +1145,41 @@ function Expenses({ expenses, clinics, providers, onRefresh, role }) {
   )
 }
 
-function Reports({ clinics, tests, providers, onSelectClinic, onSelectProvider }) {
+function Reports({ clinics, tests, providers, onSelectClinic, onSelectProvider, selectedReps = [], reps = [] }) {
   const [activeAccountsPage, setActiveAccountsPage] = useState(0)
   const [activeProvidersPage, setActiveProvidersPage] = useState(0)
   const [inactiveAccountsPage, setInactiveAccountsPage] = useState(0)
   const [inactiveProvidersPage, setInactiveProvidersPage] = useState(0)
+  const filteredClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
+  const filteredTests = selectedReps?.length > 0 ? tests.filter(t => filteredClinics.some(c => c.id === t.clinic_id)) : tests
+  const filteredProviders = selectedReps?.length > 0 ? providers.filter(p => filteredClinics.some(c => c.id === p.clinic_id)) : providers
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
   const monthCounts = months.map(m => {
     const monthNum = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'].indexOf(m) + 1
-    return (tests || []).filter(t => {
+    return (filteredTests || []).filter(t => {
       const d = new Date(t.collected_date || t.collected || 0)
       return d.getMonth() + 1 === monthNum
     }).length
   })
   const maxCount = Math.max(...monthCounts, 1)
 
-  const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+  const activeAccounts = filteredClinics.filter(c => (filteredTests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
     const aCount = (tests || []).filter(t => t.clinic_id === a.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
     const bCount = (tests || []).filter(t => t.clinic_id === b.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
     return bCount - aCount
   })
-  const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+  const activeProviders = filteredProviders.filter(p => (filteredTests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
     const aCount = (tests || []).filter(t => t.provider_id === a.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
     const bCount = (tests || []).filter(t => t.provider_id === b.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo).length
     return bCount - aCount
   })
-  const inactiveAccounts = clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+  const inactiveAccounts = filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
     const aCount = (tests || []).filter(t => t.clinic_id === a.id).length
     const bCount = (tests || []).filter(t => t.clinic_id === b.id).length
     return bCount - aCount
   })
-  const inactiveProviders = providers.filter(p => !(tests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
+  const inactiveProviders = filteredProviders.filter(p => !(filteredTests || []).some(t => t.provider_id === p.id && new Date(t.collected_date || t.collected || 0) > thirtyDaysAgo)).sort((a, b) => {
     const aCount = (tests || []).filter(t => t.provider_id === a.id).length
     const bCount = (tests || []).filter(t => t.provider_id === b.id).length
     return bCount - aCount
@@ -1176,6 +1187,7 @@ function Reports({ clinics, tests, providers, onSelectClinic, onSelectProvider }
 
   return (
     <div>
+      {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div className="card" style={{ marginBottom: 16 }}>
         <h3 style={{ marginBottom: 12 }}>Total Sample Volume — Last 6 Months</h3>
         <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
