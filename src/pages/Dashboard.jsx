@@ -123,21 +123,24 @@ export default function Dashboard({ session }) {
 }
 
 function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps }) {
+  const filteredClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
+  const filteredProviders = selectedReps?.length > 0 ? providers.filter(p => filteredClinics.some(c => c.id === p.clinic_id)) : providers
+  const filteredTests = selectedReps?.length > 0 ? tests.filter(t => filteredClinics.some(c => c.id === t.clinic_id)) : tests
   const filtered = selectedReps?.length > 0
   const [selectedMonth, setSelectedMonth] = useState(null)
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
-  const totalTests = (tests || []).length
-  const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id)).length
-  const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id)).length
-  const needAttention = clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length
+  const totalTests = (filteredTests || []).length
+  const activeAccounts = filteredClinics.filter(c => (filteredTests || []).some(t => t.clinic_id === c.id)).length
+  const activeProviders = filteredProviders.filter(p => (filteredTests || []).some(t => t.provider_id === p.id)).length
+  const needAttention = filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).length
   
   // Calculate tests by month
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
   const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10' }
   const monthlyCounts = {}
   months.forEach(m => { monthlyCounts[m] = 0 })
-  ;(tests || []).forEach(t => {
+  ;(filteredTests || []).forEach(t => {
     if (t.collected) {
       const month = t.collected.substring(5, 7)
       const monthName = Object.entries(monthMap).find(([k, v]) => v === month)?.[0]
@@ -156,7 +159,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   
   // Top providers by test count
   const providerCounts = {}
-  ;(tests || []).forEach(t => { if (t.provider_id) providerCounts[t.provider_id] = (providerCounts[t.provider_id] || 0) + 1 })
+  ;(filteredTests || []).forEach(t => { if (t.provider_id) providerCounts[t.provider_id] = (providerCounts[t.provider_id] || 0) + 1 })
   const topProviders = Object.entries(providerCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([id, count]) => {
     const p = providers.find(pr => pr.id === id)
     return { name: p?.name || 'Unknown', count }
@@ -164,7 +167,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   
   // Top accounts by test count
   const accountCounts = {}
-  ;(tests || []).forEach(t => { if (t.clinic_id) accountCounts[t.clinic_id] = (accountCounts[t.clinic_id] || 0) + 1 })
+  ;(filteredTests || []).forEach(t => { if (t.clinic_id) accountCounts[t.clinic_id] = (accountCounts[t.clinic_id] || 0) + 1 })
   const topAccounts = Object.entries(accountCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, count]) => {
     const c = clinics.find(cl => cl.id === id)
     return { name: c?.name || 'Unknown', count }
