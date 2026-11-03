@@ -118,6 +118,8 @@ export default function Dashboard({ session }) {
 
 function DashboardHome({ clinics, expenses, providers, tests }) {
   const [selectedMonth, setSelectedMonth] = useState(null)
+  const [testPage, setTestPage] = useState(0)
+  const [attentionPage, setAttentionPage] = useState(0)
   const totalTests = (tests || []).length
   const activeAccounts = clinics.filter(c => (tests || []).some(t => t.clinic_id === c.id)).length
   const activeProviders = providers.filter(p => (tests || []).some(t => t.provider_id === p.id)).length
@@ -209,25 +211,39 @@ function DashboardHome({ clinics, expenses, providers, tests }) {
           <table style={{ fontSize: 13 }}>
             <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Practice</th></tr></thead>
             <tbody>
-              {(tests || []).slice(0, 10).map(t => (
+              {(tests || []).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
                   <td>{t.collected || '—'}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type}</td>
-                  <td>{t.clinics?.name || '—'}</td>
+                  <td>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
               ))}
             </tbody>
           </table>
           {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
+          {(tests || []).length > 10 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setTestPage(Math.max(0, testPage - 1))} disabled={testPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{testPage * 10 + 1}-{Math.min((testPage + 1) * 10, tests.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setTestPage(testPage + 1)} disabled={(testPage + 1) * 10 >= tests.length}>→</button>
+            </div>
+          )}
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Accounts Needing Attention</h3>
-          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).slice(0, 5).map(c => (
+          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).slice(attentionPage * 5, (attentionPage + 1) * 5).map(c => (
             <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
               <span style={{ color: '#14b8a6' }}>{c.name}</span><span style={{ color: '#ef4444' }}>30+</span>
             </div>
           ))}
+          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length > 5 && (
+            <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
+              <button className="btn btn-secondary btn-sm" onClick={() => setAttentionPage(Math.max(0, attentionPage - 1))} disabled={attentionPage === 0}>←</button>
+              <span style={{ padding: '4px 8px' }}>{attentionPage * 5 + 1}-{Math.min((attentionPage + 1) * 5, clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setAttentionPage(attentionPage + 1)} disabled={(attentionPage + 1) * 5 >= clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length}>→</button>
+            </div>
+          )}
         </div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
