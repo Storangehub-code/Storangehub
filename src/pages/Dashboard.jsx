@@ -1343,7 +1343,7 @@ function Followups({ clinics }) {
     for (let i = 1; i <= daysInMonth; i++) days.push(i)
   }
 
-  const monthName = today.toLocaleString('default', { month: 'long', year: 'numeric' })
+  const monthName = viewMonth.toLocaleString('default', { month: 'long', year: 'numeric' })
   const upcoming = [...followups].sort((a, b) => a.date.localeCompare(b.date))
 
   return (
