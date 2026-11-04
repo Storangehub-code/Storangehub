@@ -131,12 +131,29 @@ export default function Dashboard({ session }) {
   )
 }
 
+function getProviderName(t) {
+  return t.provider_name || t.physician_name || t.doctor_name || t.provider || t.ordering_physician || 'Unknown'
+}
+
+function getClinicName(t) {
+  return t.clinic_name || t.practice_name || t.account_name || t.facility_name || t.clinic || '—'
+}
+
+function getPanel(t) {
+  return t.panel || t.test_type || t.test_name || t.panel_name || t.order_type || '—'
+}
+
+function getCollected(t) {
+  const d = t.collected_at || t.collection_date || t.collected_date || t.date_collected || t.received_at
+  return d ? new Date(d).toLocaleDateString() : '—'
+}
+
 function DashboardHome({ accounts, providers, tests }) {
   const totalTests = tests.length
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
   const activeAccounts = accounts.filter(a =>
-    tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)
+    tests.some(t => getClinicName(t) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collection_date || t.collected_date || 0) > thirtyDaysAgo)
   ).length
   const needsAttention = accounts.length - activeAccounts
 
@@ -144,7 +161,7 @@ function DashboardHome({ accounts, providers, tests }) {
 
   const topProviders = Object.entries(
     tests.reduce((acc, t) => {
-      const name = t.provider_name || 'Unknown'
+      const name = getProviderName(t)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
@@ -152,14 +169,14 @@ function DashboardHome({ accounts, providers, tests }) {
 
   const topAccounts = Object.entries(
     tests.reduce((acc, t) => {
-      const name = t.clinic_name || 'Unknown'
+      const name = getClinicName(t)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
   ).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
   const panelCounts = tests.reduce((acc, t) => {
-    const panel = t.panel || 'Other'
+    const panel = getPanel(t)
     acc[panel] = (acc[panel] || 0) + 1
     return acc
   }, {})
@@ -230,11 +247,11 @@ function DashboardHome({ accounts, providers, tests }) {
             <tbody>
               {recentTests.map((t, i) => (
                 <tr key={t.accession || i} style={{ borderTop: '1px solid #374151' }}>
-                  <td style={{ padding: '8px 0' }}>{t.accession || '—'}</td>
-                  <td>{t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</td>
-                  <td>{t.panel || '—'}</td>
-                  <td>{t.provider_name || 'Unknown'}</td>
-                  <td>{t.clinic_name || '—'}</td>
+                  <td style={{ padding: '8px 0' }}>{t.accession || t.accession_number || '—'}</td>
+                  <td>{getCollected(t)}</td>
+                  <td>{getPanel(t)}</td>
+                  <td>{getProviderName(t)}</td>
+                  <td>{getClinicName(t)}</td>
                 </tr>
               ))}
             </tbody>
@@ -242,7 +259,7 @@ function DashboardHome({ accounts, providers, tests }) {
         </Card>
 
         <Card title="Accounts Needing Attention">
-          {accounts.filter(a => !tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)).slice(0, 6).map(a => (
+          {accounts.filter(a => !tests.some(t => getClinicName(t) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collection_date || t.collected_date || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
             <div key={a.id || a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
               <span>{a.name}</span>
               <span style={{ color: '#ef4444', fontSize: 12 }}>30+</span>
@@ -294,7 +311,7 @@ function AccountsList({ accounts, tests, onSelect }) {
 }
 
 function AccountDetail({ account, tests, providers, onBack }) {
-  const accountTests = tests.filter(t => t.clinic_name === account.name)
+  const accountTests = tests.filter(t => getClinicName(t) === account.name)
   const accountProviders = providers.filter(p => p.clinic_code === account.clinic_code)
   return (
     <div>
@@ -312,7 +329,7 @@ function AccountDetail({ account, tests, providers, onBack }) {
         <Card title={`Recent Tests (${accountTests.length})`}>
           {accountTests.slice(0, 10).map(t => (
             <div key={t.accession} style={{ padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
-              {t.accession} · {t.panel} · {t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}
+              {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t)}
             </div>
           ))}
         </Card>
@@ -325,7 +342,7 @@ function ProvidersList({ providers, tests, onSelect }) {
   const [search, setSearch] = useState('')
   const withCounts = providers.map(p => ({
     ...p,
-    count: tests.filter(t => t.provider_name && t.provider_name.includes(p.last_name)).length
+    count: tests.filter(t => getProviderName(t).includes(p.last_name)).length
   })).sort((a, b) => b.count - a.count)
   const filtered = withCounts.filter(p =>
     `${p.last_name} ${p.first_name}`.toLowerCase().includes(search.toLowerCase())
@@ -350,7 +367,7 @@ function ProvidersList({ providers, tests, onSelect }) {
 }
 
 function ProviderDetail({ provider, tests, onBack }) {
-  const providerTests = tests.filter(t => t.provider_name && t.provider_name.includes(provider.last_name))
+  const providerTests = tests.filter(t => getProviderName(t).includes(provider.last_name))
   return (
     <div>
       <button onClick={onBack} style={{ marginBottom: 16, padding: '6px 14px', borderRadius: 6, background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}>← Back</button>
@@ -359,7 +376,7 @@ function ProviderDetail({ provider, tests, onBack }) {
       <Card title={`Tests (${providerTests.length})`} style={{ marginTop: 20 }}>
         {providerTests.slice(0, 15).map(t => (
           <div key={t.accession} style={{ padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
-            {t.accession} · {t.panel} · {t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}
+            {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t)}
           </div>
         ))}
       </Card>
