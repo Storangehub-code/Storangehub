@@ -123,19 +123,21 @@ export default function Dashboard({ session }) {
 function DashboardHome({ accounts, providers, tests }) {
   const totalTests = tests.length
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
+
   const activeAccounts = accounts.filter(a =>
     tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)
   ).length
   const inactiveAccounts = accounts.length - activeAccounts
 
   const recentTests = tests.slice(0, 10)
+
   const topProviders = Object.entries(
     tests.reduce((acc, t) => {
       const name = t.provider_name || 'Unknown'
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 5)
+  ).sort((a, b) => b[1] - a[1]).slice(0, 6)
 
   const panelCounts = tests.reduce((acc, t) => {
     const panel = t.panel || 'Other'
@@ -143,45 +145,74 @@ function DashboardHome({ accounts, providers, tests }) {
     return acc
   }, {})
 
+  const topAccounts = Object.entries(
+    tests.reduce((acc, t) => {
+      const name = t.clinic_name || 'Unknown'
+      acc[name] = (acc[name] || 0) + 1
+      return acc
+    }, {})
+  ).sort((a, b) => b[1] - a[1]).slice(0, 6)
+
   return (
     <div>
-      <h2 style={{ marginBottom: 20 }}>Dashboard</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 16, marginBottom: 28 }}>
-        <KpiCard value={totalTests} label="Total Tests" />
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+        <h2 style={{ margin: 0 }}>Dashboard</h2>
+        <div style={{ fontSize: 13, color: '#9ca3af' }}>Live data · {new Date().toLocaleDateString()}</div>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
+        <KpiCard value={totalTests.toLocaleString()} label="Total Tests" />
         <KpiCard value={activeAccounts} label="Active Accounts" />
         <KpiCard value={providers.length} label="Providers" />
         <KpiCard value={accounts.length} label="Total Accounts" />
         <KpiCard value={inactiveAccounts} label="Needs Attention" color="#f59e0b" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, marginBottom: 20 }}>
         <Card title="Recent Testing Activity">
           {recentTests.map((t, i) => (
             <div key={t.accession || i} style={{ padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
-              <div><strong>{t.accession || '—'}</strong> · {t.provider_name || 'Unknown'}</div>
-              <div style={{ color: '#9ca3af', fontSize: 13 }}>{t.clinic_name || '—'} · {t.panel || '—'} · {t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</div>
+              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+                <strong>{t.accession || '—'}</strong>
+                <span style={{ color: '#9ca3af', fontSize: 12 }}>{t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</span>
+              </div>
+              <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 2 }}>
+                {t.provider_name || 'Unknown'} · {t.clinic_name || '—'} · {t.panel || '—'}
+              </div>
             </div>
           ))}
         </Card>
+
         <Card title="Top Providers">
           {topProviders.map(([name, count]) => (
+            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
+              <span>{name}</span>
+              <strong style={{ background: '#111827', padding: '2px 10px', borderRadius: 12 }}>{count}</strong>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <Card title="Top Accounts by Volume">
+          {topAccounts.map(([name, count]) => (
             <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
               <span>{name}</span>
               <strong>{count}</strong>
             </div>
           ))}
         </Card>
-      </div>
 
-      <Card title="Tests by Panel" style={{ marginTop: 20 }}>
-        <div style={{ display: 'flex', flexWrap: 'wrap', gap: 12 }}>
-          {Object.entries(panelCounts).sort((a, b) => b[1] - a[1]).slice(0, 10).map(([panel, count]) => (
-            <div key={panel} style={{ background: '#111827', padding: '8px 14px', borderRadius: 8, fontSize: 13 }}>
-              <strong>{count}</strong> · {panel}
-            </div>
-          ))}
-        </div>
-      </Card>
+        <Card title="Tests by Panel">
+          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
+            {Object.entries(panelCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([panel, count]) => (
+              <div key={panel} style={{ background: '#111827', padding: '8px 14px', borderRadius: 8, fontSize: 13 }}>
+                <strong style={{ color: '#2dd4bf' }}>{count}</strong> · {panel}
+              </div>
+            ))}
+          </div>
+        </Card>
+      </div>
     </div>
   )
 }
