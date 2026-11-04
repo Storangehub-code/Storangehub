@@ -134,11 +134,32 @@ export default function Dashboard({ session }) {
   )
 }
 
+function formatProviderName(p) {
+  if (!p) return 'Unknown'
+  const last = p.last_name || ''
+  const first = p.first_name || ''
+  const title = p.title || ''
+  return `${last}, ${first}${title ? ' ' + title : ''}`.replace(/\s+/g, ' ').trim()
+}
+
 function getProviderName(t, providers = []) {
-  if (t.provider_name) return t.provider_name
+  if (t.provider_name) {
+    // Try to reformat existing provider_name if it looks like "Last, Title First"
+    const parts = t.provider_name.split(',').map(s => s.trim())
+    if (parts.length === 2) {
+      const nameParts = parts[1].split(' ')
+      if (nameParts.length >= 2 && (nameParts[0].length <= 5 || nameParts[0].endsWith('.'))) {
+        // Looks like "Last, MD First" -> swap to "Last, First MD"
+        const title = nameParts[0]
+        const first = nameParts.slice(1).join(' ')
+        return `${parts[0]}, ${first} ${title}`.trim()
+      }
+    }
+    return t.provider_name
+  }
   if (t.provider_id && providers.length) {
     const match = providers.find(p => p.id === t.provider_id)
-    if (match) return `${match.last_name || ''}, ${match.first_name || ''} ${match.title || ''}`.trim()
+    if (match) return formatProviderName(match)
   }
   return 'Unknown'
 }
@@ -335,7 +356,7 @@ function AccountDetail({ account, tests, providers, clinics, onBack }) {
         <Card title={`Providers (${accountProviders.length})`}>
           {accountProviders.map(p => (
             <div key={p.id || p.npi} style={{ padding: '8px 0', borderBottom: '1px solid #374151' }}>
-              {p.last_name}, {p.first_name} {p.title} · NPI {p.npi || '—'}
+              {formatProviderName(p)} · NPI {p.npi || '—'}
             </div>
           ))}
         </Card>
@@ -368,7 +389,7 @@ function ProvidersList({ providers, tests, clinics, onSelect }) {
         {filtered.slice(0, 100).map((p, i) => (
           <div key={p.id || p.npi || i} onClick={() => onSelect(p)} style={{ background: '#1f2937', padding: 14, borderRadius: 8, cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
             <div>
-              <strong>{p.last_name}, {p.first_name} {p.title}</strong>
+              <strong>{formatProviderName(p)}</strong>
               <div style={{ fontSize: 13, color: '#9ca3af' }}>NPI: {p.npi || '—'} · {p.clinic_code || '—'}</div>
             </div>
             <div style={{ fontSize: 18, fontWeight: 600 }}>{p.count}</div>
@@ -384,7 +405,7 @@ function ProviderDetail({ provider, tests, providers, clinics, onBack }) {
   return (
     <div>
       <button onClick={onBack} style={{ marginBottom: 16, padding: '6px 14px', borderRadius: 6, background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}>← Back</button>
-      <h2>{provider.last_name}, {provider.first_name} {provider.title}</h2>
+      <h2>{formatProviderName(provider)}</h2>
       <p style={{ color: '#9ca3af' }}>NPI: {provider.npi || '—'} · Clinic: {provider.clinic_code || '—'}</p>
       <Card title={`Tests (${providerTests.length})`} style={{ marginTop: 20 }}>
         {providerTests.slice(0, 15).map(t => (
