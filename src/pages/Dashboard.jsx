@@ -54,6 +54,7 @@ export default function Dashboard({ session }) {
 
   const role = profile?.role || 'rep'
   const roleLabel = { global_admin: 'Global Admin', manager: 'Manager', rep: 'Rep' }[role] || 'Rep'
+  const userName = profile?.full_name || session.user.email
 
   const nav = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -91,30 +92,40 @@ export default function Dashboard({ session }) {
         ))}
       </div>
 
-      <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
-        {error && <div style={{ background: '#7f1d1d', padding: 16, borderRadius: 8, marginBottom: 16 }}>Error: {error}</div>}
-        {loading && <div style={{ padding: 20 }}>Loading data...</div>}
+      <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+        <div style={{ background: '#111827', padding: '12px 28px', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+          <div style={{ fontWeight: 600 }}>ResponseDx CRM</div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <span style={{ fontSize: 14 }}>{userName}</span>
+            <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
+          </div>
+        </div>
 
-        {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} />}
-        {!loading && page === 'accounts' && (
-          selectedAccount
-            ? <AccountDetail account={selectedAccount} tests={tests} providers={providers} onBack={() => setSelectedAccount(null)} />
-            : <AccountsList accounts={accounts} tests={tests} onSelect={setSelectedAccount} />
-        )}
-        {!loading && page === 'providers' && (
-          selectedProvider
-            ? <ProviderDetail provider={selectedProvider} tests={tests} onBack={() => setSelectedProvider(null)} />
-            : <ProvidersList providers={providers} tests={tests} onSelect={setSelectedProvider} />
-        )}
-        {!loading && page === 'reports' && <ReportsPage tests={tests} accounts={accounts} />}
-        {!loading && page === 'followups' && <FollowupsPage />}
-        {!loading && page === 'expenses' && <ExpensesPage />}
-        {!loading && page === 'prospects' && <ProspectsPage />}
-        {!loading && page === 'reps' && <RepsPage />}
-        {!loading && page === 'managers' && <ManagersPage />}
-        {!loading && page === 'input' && <InputTestsPage />}
-        {!loading && page === 'admin' && <AdminPage />}
-        {!loading && page === 'training' && <TrainingPage />}
+        <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
+          {error && <div style={{ background: '#7f1d1d', padding: 16, borderRadius: 8, marginBottom: 16 }}>Error: {error}</div>}
+          {loading && <div style={{ padding: 20 }}>Loading data...</div>}
+
+          {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} />}
+          {!loading && page === 'accounts' && (
+            selectedAccount
+              ? <AccountDetail account={selectedAccount} tests={tests} providers={providers} onBack={() => setSelectedAccount(null)} />
+              : <AccountsList accounts={accounts} tests={tests} onSelect={setSelectedAccount} />
+          )}
+          {!loading && page === 'providers' && (
+            selectedProvider
+              ? <ProviderDetail provider={selectedProvider} tests={tests} onBack={() => setSelectedProvider(null)} />
+              : <ProvidersList providers={providers} tests={tests} onSelect={setSelectedProvider} />
+          )}
+          {!loading && page === 'reports' && <ReportsPage tests={tests} accounts={accounts} />}
+          {!loading && page === 'followups' && <FollowupsPage />}
+          {!loading && page === 'expenses' && <ExpensesPage />}
+          {!loading && page === 'prospects' && <ProspectsPage />}
+          {!loading && page === 'reps' && <RepsPage />}
+          {!loading && page === 'managers' && <ManagersPage />}
+          {!loading && page === 'input' && <InputTestsPage />}
+          {!loading && page === 'admin' && <AdminPage />}
+          {!loading && page === 'training' && <TrainingPage />}
+        </div>
       </div>
     </div>
   )
@@ -127,7 +138,7 @@ function DashboardHome({ accounts, providers, tests }) {
   const activeAccounts = accounts.filter(a =>
     tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)
   ).length
-  const inactiveAccounts = accounts.length - activeAccounts
+  const needsAttention = accounts.length - activeAccounts
 
   const recentTests = tests.slice(0, 10)
 
@@ -137,13 +148,7 @@ function DashboardHome({ accounts, providers, tests }) {
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 6)
-
-  const panelCounts = tests.reduce((acc, t) => {
-    const panel = t.panel || 'Other'
-    acc[panel] = (acc[panel] || 0) + 1
-    return acc
-  }, {})
+  ).sort((a, b) => b[1] - a[1]).slice(0, 8)
 
   const topAccounts = Object.entries(
     tests.reduce((acc, t) => {
@@ -151,66 +156,115 @@ function DashboardHome({ accounts, providers, tests }) {
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
-  ).sort((a, b) => b[1] - a[1]).slice(0, 6)
+  ).sort((a, b) => b[1] - a[1]).slice(0, 5)
+
+  const panelCounts = tests.reduce((acc, t) => {
+    const panel = t.panel || 'Other'
+    acc[panel] = (acc[panel] || 0) + 1
+    return acc
+  }, {})
+
+  const estimatedRevenue = totalTests * 125
 
   return (
     <div>
-      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
-        <h2 style={{ margin: 0 }}>Dashboard</h2>
-        <div style={{ fontSize: 13, color: '#9ca3af' }}>Live data · {new Date().toLocaleDateString()}</div>
+      <div style={{ marginBottom: 20 }}>
+        <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
+        <div style={{ fontSize: 13, color: '#9ca3af' }}>Live data · Salesperson shown on clinic detail where available</div>
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 14, marginBottom: 24 }}>
-        <KpiCard value={totalTests.toLocaleString()} label="Total Tests" />
-        <KpiCard value={activeAccounts} label="Active Accounts" />
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 24 }}>
+        <KpiCard value={totalTests.toLocaleString()} label="Tests (All)" sub="Live total" />
+        <KpiCard value={activeAccounts} label="Active Accounts" sub="Ordered in last 30 days" />
         <KpiCard value={providers.length} label="Providers" />
-        <KpiCard value={accounts.length} label="Total Accounts" />
-        <KpiCard value={inactiveAccounts} label="Needs Attention" color="#f59e0b" />
+        <KpiCard value={`$${estimatedRevenue.toLocaleString()}`} label="Est. Test Revenue" sub="$125 / test" />
+        <KpiCard value={needsAttention} label="Accounts Need Attention" color="#ef4444" sub="No specimens in 30+ days" />
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 20, marginBottom: 20 }}>
-        <Card title="Recent Testing Activity">
-          {recentTests.map((t, i) => (
-            <div key={t.accession || i} style={{ padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
-              <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-                <strong>{t.accession || '—'}</strong>
-                <span style={{ color: '#9ca3af', fontSize: 12 }}>{t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</span>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.8fr 0.9fr', gap: 16, marginBottom: 16 }}>
+        <Card title="Monthly Testing Volume">
+          <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 12, paddingTop: 10 }}>
+            {['Apr','May','Jun','Jul','Aug','Sep','Oct'].map((m, i) => (
+              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
+                <div style={{ height: 40 + i * 18, background: '#0d9488', borderRadius: 4, marginBottom: 6 }} />
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{m}</div>
               </div>
-              <div style={{ color: '#9ca3af', fontSize: 13, marginTop: 2 }}>
-                {t.provider_name || 'Unknown'} · {t.clinic_name || '—'} · {t.panel || '—'}
-              </div>
-            </div>
-          ))}
+            ))}
+          </div>
+          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 8 }}>Placeholder chart — monthly breakdown coming next</div>
         </Card>
 
-        <Card title="Top Providers">
+        <Card title="Tests by Panel">
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {Object.entries(panelCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([panel, count]) => (
+              <div key={panel} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
+                <span>{panel}</span>
+                <strong>{count}</strong>
+              </div>
+            ))}
+          </div>
+        </Card>
+
+        <Card title="Top Providers by Testing Volume">
           {topProviders.map(([name, count]) => (
-            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
-              <span>{name}</span>
-              <strong style={{ background: '#111827', padding: '2px 10px', borderRadius: 12 }}>{count}</strong>
-            </div>
-          ))}
-        </Card>
-      </div>
-
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-        <Card title="Top Accounts by Volume">
-          {topAccounts.map(([name, count]) => (
-            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '10px 0', borderBottom: '1px solid #374151', fontSize: 14 }}>
+            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
               <span>{name}</span>
               <strong>{count}</strong>
             </div>
           ))}
         </Card>
+      </div>
 
-        <Card title="Tests by Panel">
-          <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
-            {Object.entries(panelCounts).sort((a, b) => b[1] - a[1]).slice(0, 8).map(([panel, count]) => (
-              <div key={panel} style={{ background: '#111827', padding: '8px 14px', borderRadius: 8, fontSize: 13 }}>
-                <strong style={{ color: '#2dd4bf' }}>{count}</strong> · {panel}
-              </div>
-            ))}
-          </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1.4fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card title="Recent Testing Activity">
+          <table style={{ width: '100%', fontSize: 13, borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ color: '#9ca3af', textAlign: 'left' }}>
+                <th style={{ padding: '6px 0' }}>Accession</th>
+                <th>Collected</th>
+                <th>Test</th>
+                <th>Provider</th>
+                <th>Practice</th>
+              </tr>
+            </thead>
+            <tbody>
+              {recentTests.map((t, i) => (
+                <tr key={t.accession || i} style={{ borderTop: '1px solid #374151' }}>
+                  <td style={{ padding: '8px 0' }}>{t.accession || '—'}</td>
+                  <td>{t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</td>
+                  <td>{t.panel || '—'}</td>
+                  <td>{t.provider_name || 'Unknown'}</td>
+                  <td>{t.clinic_name || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+
+        <Card title="Accounts Needing Attention">
+          {accounts.filter(a => !tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)).slice(0, 6).map(a => (
+            <div key={a.id || a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
+              <span>{a.name}</span>
+              <span style={{ color: '#ef4444', fontSize: 12 }}>30+</span>
+            </div>
+          ))}
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+        <Card title="Top Performing Accounts">
+          {topAccounts.map(([name, count]) => (
+            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
+              <span>{name}</span>
+              <strong>{count}</strong>
+            </div>
+          ))}
+        </Card>
+        <Card title="Manager Performance">
+          <div style={{ fontSize: 13, color: '#9ca3af' }}>Coming soon with role data</div>
+        </Card>
+        <Card title="Rep Performance">
+          <div style={{ fontSize: 13, color: '#9ca3af' }}>Coming soon with role data</div>
         </Card>
       </div>
     </div>
@@ -376,19 +430,20 @@ function TrainingPage() {
   return <div><h2>Training</h2><p style={{ color: '#9ca3af' }}>Training documents will be restored here.</p></div>
 }
 
-function KpiCard({ value, label, color }) {
+function KpiCard({ value, label, sub, color }) {
   return (
     <div style={{ background: '#1f2937', padding: 16, borderRadius: 12 }}>
-      <div style={{ fontSize: 28, fontWeight: 700, color: color || '#fff' }}>{value}</div>
+      <div style={{ fontSize: 26, fontWeight: 700, color: color || '#fff' }}>{value}</div>
       <div style={{ color: '#9ca3af', fontSize: 13 }}>{label}</div>
+      {sub && <div style={{ color: '#6b7280', fontSize: 11, marginTop: 4 }}>{sub}</div>}
     </div>
   )
 }
 
 function Card({ title, children, style }) {
   return (
-    <div style={{ background: '#1f2937', borderRadius: 12, padding: 20, ...style }}>
-      <h3 style={{ margin: '0 0 16px', fontSize: 16 }}>{title}</h3>
+    <div style={{ background: '#1f2937', borderRadius: 12, padding: 18, ...style }}>
+      <h3 style={{ margin: '0 0 14px', fontSize: 15 }}>{title}</h3>
       {children}
     </div>
   )
