@@ -1596,44 +1596,36 @@ function ManagersList() {
     await supabase.from('profiles').update({ manager_id: managerId }).eq('id', repId)
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
   }
+  const [pickRep, setPickRep] = useState('')
   return (
     <div>
       <div style={{ marginBottom: 16 }}>
         <h2 style={{ marginBottom: 4 }}>Managers</h2>
-        <p style={{ color: '#6b7280', fontSize: 13 }}>Create managers and assign reps</p>
+        <p style={{ color: '#6b7280', fontSize: 13 }}>Manage managers and assign reps</p>
       </div>
       <div className="card">
-        <table>
-          <thead><tr><th>Manager</th><th>Email</th><th>Reps</th><th></th></tr></thead>
-          <tbody>
-            {managers.map(m => (
-              <tr key={m.id}>
-                <td style={{ color: '#14b8a6' }}>{m.full_name || '—'}</td>
-                <td>{m.email || '—'}</td>
-                <td>{reps.filter(r => r.manager_id === m.id).length}</td>
-                <td>
-                  <button className="btn secondary btn-sm" onClick={() => startEdit(m)}>Edit</button>
-                  <button className="btn secondary btn-sm" style={{ marginLeft: 4 }} onClick={() => setAssigning(assigning === m.id ? null : m.id)}>Assign</button>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+        <h3 style={{ marginBottom: 12 }}>Current Managers</h3>
+        {managers.map(m => {
+          const assigned = reps.filter(r => r.manager_id === m.id)
+          return (
+            <div key={m.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937' }}>
+              <div style={{ color: '#14b8a6', fontWeight: 600 }}>{m.full_name || '—'}</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 6 }}>Reps: {assigned.length ? assigned.map(r => r.full_name).join(', ') : 'None'}</div>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                <select value={pickRep} onChange={e => setPickRep(e.target.value)} style={{ background: '#111827', color: '#e5e7eb', border: '1px solid #374151', borderRadius: 6, padding: '6px 8px' }}>
+                  <option value="">Assign a rep...</option>
+                  {reps.filter(r => r.manager_id !== m.id).map(r => <option key={r.id} value={r.id}>{r.full_name}</option>)}
+                </select>
+                <button className="btn secondary" onClick={() => { if (pickRep) { assignRep(pickRep, m.id); setPickRep('') } }}>Assign</button>
+                <button className="btn secondary btn-sm" onClick={() => startEdit(m)}>Edit</button>
+              </div>
+            </div>
+          )
+        })}
         {!managers.length && <p style={{ color: '#6b7280' }}>No managers yet.</p>}
       </div>
-      {assigning && (
-        <div className="card" style={{ marginTop: 12 }}>
-          <h3 style={{ marginBottom: 8 }}>Assign Reps to {managers.find(m => m.id === assigning)?.full_name}</h3>
-          {reps.map(r => (
-            <label key={r.id} style={{ display: 'block', marginBottom: 4 }}>
-              <input type="checkbox" checked={r.manager_id === assigning} onChange={() => assignRep(r.id, r.manager_id === assigning ? null : assigning)} />
-              <span style={{ marginLeft: 8 }}>{r.full_name}</span>
-            </label>
-          ))}
-        </div>
-      )}
       <div className="card" id="mgr-form" style={{ marginTop: 16 }}>
-        <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Manager" : "Create New Manager"}</h3>
+        <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Manager" : "Add New Manager"}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>First Name</label><input value={form.first} onChange={e => setForm({...form, first: e.target.value})} /></div>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Last Name</label><input value={form.last} onChange={e => setForm({...form, last: e.target.value})} /></div>
@@ -1641,7 +1633,7 @@ function ManagersList() {
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Email</label><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
         </div>
         <div style={{ textAlign: 'right' }}>
-          <button className="btn" onClick={createManager}>{editing ? "Update Manager" : "Create Manager"}</button>
+          <button className="btn" onClick={createManager}>{editing ? "Update Manager" : "Add Manager"}</button>
           {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '' }) }}>Cancel</button>}
         </div>
       </div>
