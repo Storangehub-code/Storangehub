@@ -8,6 +8,7 @@ export default function Dashboard({ session }) {
   const [tests, setTests] = useState([])
   const [page, setPage] = useState('dashboard')
   const [loading, setLoading] = useState(true)
+  const [error, setError] = useState(null)
 
   useEffect(() => {
     loadProfile()
@@ -18,25 +19,41 @@ export default function Dashboard({ session }) {
   }, [profile])
 
   async function loadProfile() {
-    const { data, error } = await supabase
-      .from('profiles')
-      .select('id, full_name, role')
-      .eq('id', session.user.id)
-      .single()
-    setProfile(data || { role: 'rep', full_name: session.user.email })
+    try {
+      const { data, error } = await supabase
+        .from('profiles')
+        .select('id, full_name, role')
+        .eq('id', session.user.id)
+        .single()
+      if (error) throw error
+      setProfile(data || { role: 'rep', full_name: session.user.email })
+    } catch (err) {
+      console.error('Profile error:', err)
+      setProfile({ role: 'rep', full_name: session.user.email })
+    }
   }
 
   async function loadData() {
     setLoading(true)
-    const [acc, prov, tst] = await Promise.all([
-      supabase.from('accounts').select('*').order('name'),
-      supabase.from('providers').select('*').order('last_name'),
-      supabase.from('tests').select('*').order('collected_at', { ascending: false })
-    ])
-    setAccounts(acc.data || [])
-    setProviders(prov.data || [])
-    setTests(tst.data || [])
-    setLoading(false)
+    setError(null)
+    try {
+      const [acc, prov, tst] = await Promise.all([
+        supabase.from('accounts').select('*').order('name'),
+        supabase.from('providers').select('*').order('last_name'),
+        supabase.from('tests').select('*').order('collected_at', { ascending: false })
+      ])
+      if (acc.error) throw acc.error
+      if (prov.error) throw prov.error
+      if (tst.error) throw tst.error
+      setAccounts(acc.data || [])
+      setProviders(prov.data || [])
+      setTests(tst.data || [])
+    } catch (err) {
+      console.error('Load error:', err)
+      setError(err.message || 'Failed to load data')
+    } finally {
+      setLoading(false)
+    }
   }
 
   const role = profile?.role || 'rep'
@@ -46,12 +63,10 @@ export default function Dashboard({ session }) {
     { id: 'dashboard', label: 'Dashboard' },
     { id: 'accounts', label: 'Accounts' },
     { id: 'providers', label: 'Providers' },
-    { id: 'tests', label: 'Tests' },
-    { id: 'reports', label: 'Reports' }
+    { id: 'tests', label: 'Tests' }
   ]
 
-  if (!profile) return <div style={{ padding: 40 }}>Loading...</div>
-  if (loading) return <div style={{ padding: 40 }}>Loading data...</div>
+  if (!profile) return <div style={{ padding: 40 }}>Loading profile...</div>
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh', background: '#0b1220', color: '#e5e7eb' }}>
@@ -71,11 +86,16 @@ export default function Dashboard({ session }) {
       </div>
 
       <div style={{ flex: 1, padding: 28, overflow: 'auto' }}>
-        {page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} />}
-        {page === 'accounts' && <AccountsList accounts={accounts} tests={tests} />}
-        {page === 'providers' && <ProvidersList providers={providers} accounts={accounts} tests={tests} />}
-        {page === 'tests' && <TestsList tests={tests} />}
-        {page === 'reports' && <Reports accounts={accounts} tests={tests} providers={providers} />}
+        {error && (
+          <div style={{ background: '#7f1d1d', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+            Error: {error}
+          </div>
+        )}
+        {loading && <div style={{ padding: 20 }}>Loading data...</div>}
+        {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} />}
+        {!loading && page === 'accounts' && <AccountsList accounts={accounts} />}
+        {!loading && page === 'providers' && <ProvidersList providers={providers} />}
+        {!loading && page === 'tests' && <TestsList tests={tests} />}
       </div>
     </div>
   )
@@ -83,15 +103,15 @@ export default function Dashboard({ session }) {
 
 function DashboardHome({ accounts, providers, tests }) {
   const totalTests = tests.length
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
   const activeAccounts = accounts.filter(a => {
-    const recent = tests.filter(t => t.clinic_name === a.name && new Date(t.collected_at) > new Date(Date.now() - 30 * 24 * 60 * 60 * 1000))
-    return recent.length > 0
+    return tests.some(t => t.clinic_name === a.name && t.collected_at && new Date(t.collected_at) > thirtyDaysAgo)
   }).length
 
   return (
     <div>
       <h2 style={{ marginBottom: 20 }}>Dashboard</h2>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 16, marginBottom: 24 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 24 }}>
         <div style={{ background: '#1f2937', padding: 16, borderRadius: 12 }}>
           <div style={{ fontSize: 28, fontWeight: 700 }}>{totalTests}</div>
           <div style={{ color: '#9ca3af' }}>Total Tests</div>
@@ -109,20 +129,20 @@ function DashboardHome({ accounts, providers, tests }) {
           <div style={{ color: '#9ca3af' }}>Total Accounts</div>
         </div>
       </div>
-      <p style={{ color: '#64748b' }}>Live data from Supabase — {tests.length} tests loaded.</p>
+      <p style={{ color: '#64748b' }}>Live data — {tests.length} tests, {accounts.length} accounts, {providers.length} providers.</p>
     </div>
   )
 }
 
-function AccountsList({ accounts, tests }) {
+function AccountsList({ accounts }) {
   return (
     <div>
       <h2 style={{ marginBottom: 16 }}>Accounts ({accounts.length})</h2>
       <div style={{ display: 'grid', gap: 8 }}>
-        {accounts.slice(0, 50).map(a => (
-          <div key={a.id || a.clinic_code} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
-            <strong>{a.name}</strong>
-            <div style={{ fontSize: 13, color: '#9ca3af' }}>{a.city}, {a.state} · {a.type || 'Clinic'}</div>
+        {accounts.slice(0, 50).map((a, i) => (
+          <div key={a.id || a.clinic_code || i} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
+            <strong>{a.name || 'Unnamed'}</strong>
+            <div style={{ fontSize: 13, color: '#9ca3af' }}>{a.city || ''}, {a.state || ''} · {a.type || 'Clinic'}</div>
           </div>
         ))}
       </div>
@@ -131,15 +151,15 @@ function AccountsList({ accounts, tests }) {
   )
 }
 
-function ProvidersList({ providers, accounts, tests }) {
+function ProvidersList({ providers }) {
   return (
     <div>
       <h2 style={{ marginBottom: 16 }}>Providers ({providers.length})</h2>
       <div style={{ display: 'grid', gap: 8 }}>
-        {providers.slice(0, 50).map(p => (
-          <div key={p.id || p.npi} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
-            <strong>{p.last_name}, {p.first_name} {p.title}</strong>
-            <div style={{ fontSize: 13, color: '#9ca3af' }}>NPI: {p.npi} · {p.clinic_code || '—'}</div>
+        {providers.slice(0, 50).map((p, i) => (
+          <div key={p.id || p.npi || i} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
+            <strong>{p.last_name || ''}, {p.first_name || ''} {p.title || ''}</strong>
+            <div style={{ fontSize: 13, color: '#9ca3af' }}>NPI: {p.npi || '—'} · {p.clinic_code || '—'}</div>
           </div>
         ))}
       </div>
@@ -153,24 +173,13 @@ function TestsList({ tests }) {
     <div>
       <h2 style={{ marginBottom: 16 }}>Recent Tests ({tests.length})</h2>
       <div style={{ display: 'grid', gap: 8 }}>
-        {tests.slice(0, 25).map(t => (
-          <div key={t.accession} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
-            <strong>{t.accession}</strong> — {t.provider_name} · {t.clinic_name}
-            <div style={{ fontSize: 13, color: '#9ca3af' }}>{t.panel} · {t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</div>
+        {tests.slice(0, 25).map((t, i) => (
+          <div key={t.accession || i} style={{ background: '#1f2937', padding: 12, borderRadius: 8 }}>
+            <strong>{t.accession || '—'}</strong> — {t.provider_name || ''} · {t.clinic_name || ''}
+            <div style={{ fontSize: 13, color: '#9ca3af' }}>{t.panel || ''} · {t.collected_at ? new Date(t.collected_at).toLocaleDateString() : '—'}</div>
           </div>
         ))}
       </div>
-    </div>
-  )
-}
-
-function Reports({ accounts, tests, providers }) {
-  return (
-    <div>
-      <h2>Reports</h2>
-      <p>Total tests: {tests.length}</p>
-      <p>Accounts: {accounts.length}</p>
-      <p>Providers: {providers.length}</p>
     </div>
   )
 }
