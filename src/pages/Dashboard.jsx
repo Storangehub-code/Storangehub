@@ -62,7 +62,7 @@ export default function Dashboard({ session }) {
     { id: 'providers', label: 'Surgeons / Providers' },
     { id: 'reports', label: 'Reports' },
     { id: 'followups', label: 'Tasks & Follow-ups' },
-    { id: 'expenses', label: 'Expenses' },
+    { id: 'expenses', label: 'Expense Reports' },
     { id: 'prospects', label: 'Prospects' },
     ...(role !== 'rep' ? [{ id: 'reps', label: 'Reps' }] : []),
     ...(role === 'global_admin' ? [
@@ -395,7 +395,7 @@ function FollowupsPage() {
 function ExpensesPage() {
   return (
     <div>
-      <h2>Expenses</h2>
+      <h2>Expense Reports</h2>
       <p style={{ color: '#9ca3af' }}>Expense reporting and approvals will be restored here.</p>
     </div>
   )
