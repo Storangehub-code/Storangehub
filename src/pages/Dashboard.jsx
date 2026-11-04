@@ -135,8 +135,13 @@ function getProviderName(t) {
   return t.provider_name || 'Unknown'
 }
 
-function getClinicName(t) {
-  return t.clinic_name || '—'
+function getClinicName(t, accounts = []) {
+  if (t.clinic_name) return t.clinic_name
+  if (t.clinic_id && accounts.length) {
+    const match = accounts.find(a => a.id === t.clinic_id || a.clinic_code === t.clinic_id)
+    if (match?.name) return match.name
+  }
+  return '—'
 }
 
 function getPanel(t) {
@@ -153,7 +158,7 @@ function DashboardHome({ accounts, providers, tests }) {
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
   const activeAccounts = accounts.filter(a =>
-    tests.some(t => getClinicName(t) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collection_date || t.collected_date || 0) > thirtyDaysAgo)
+    tests.some(t => getClinicName(t, accounts) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collected || 0) > thirtyDaysAgo)
   ).length
   const needsAttention = accounts.length - activeAccounts
 
@@ -169,7 +174,7 @@ function DashboardHome({ accounts, providers, tests }) {
 
   const topAccounts = Object.entries(
     tests.reduce((acc, t) => {
-      const name = getClinicName(t)
+      const name = getClinicName(t, accounts)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
@@ -251,7 +256,7 @@ function DashboardHome({ accounts, providers, tests }) {
                   <td>{getCollected(t)}</td>
                   <td>{getPanel(t)}</td>
                   <td>{getProviderName(t)}</td>
-                  <td>{getClinicName(t)}</td>
+                  <td>{getClinicName(t, accounts)}</td>
                 </tr>
               ))}
             </tbody>
@@ -259,7 +264,7 @@ function DashboardHome({ accounts, providers, tests }) {
         </Card>
 
         <Card title="Accounts Needing Attention">
-          {accounts.filter(a => !tests.some(t => getClinicName(t) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collection_date || t.collected_date || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
+          {accounts.filter(a => !tests.some(t => getClinicName(t, accounts) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collected || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
             <div key={a.id || a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
               <span>{a.name}</span>
               <span style={{ color: '#ef4444', fontSize: 12 }}>30+</span>
