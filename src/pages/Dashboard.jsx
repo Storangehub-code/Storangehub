@@ -261,6 +261,11 @@ function DashboardHome({ accounts, providers, tests }) {
               ))}
             </tbody>
           </table>
+          {recentTests[0] && (
+            <pre style={{ fontSize: 11, color: '#9ca3af', marginTop: 12, whiteSpace: 'pre-wrap' }}>
+              {JSON.stringify(recentTests[0], null, 2)}
+            </pre>
+          )}
         </Card>
 
         <Card title="Accounts Needing Attention">
