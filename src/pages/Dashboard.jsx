@@ -6,6 +6,7 @@ export default function Dashboard({ session }) {
   const [accounts, setAccounts] = useState([])
   const [providers, setProviders] = useState([])
   const [tests, setTests] = useState([])
+  const [clinics, setClinics] = useState([])
   const [page, setPage] = useState('dashboard')
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(null)
@@ -37,14 +38,16 @@ export default function Dashboard({ session }) {
     setLoading(true)
     setError(null)
     try {
-      const [acc, prov, tst] = await Promise.all([
+      const [acc, prov, tst, clin] = await Promise.all([
         supabase.from('accounts').select('*').order('name'),
         supabase.from('providers').select('*').order('last_name'),
-        supabase.from('tests').select('*').order('collected_at', { ascending: false })
+        supabase.from('tests').select('*').order('collected', { ascending: false }),
+        supabase.from('clinics').select('id, name'),
       ])
       setAccounts(acc.data || [])
       setProviders(prov.data || [])
       setTests(tst.data || [])
+      setClinics(clin.data || [])
     } catch (err) {
       setError(err.message || 'Failed to load data')
     } finally {
@@ -105,18 +108,18 @@ export default function Dashboard({ session }) {
           {error && <div style={{ background: '#7f1d1d', padding: 16, borderRadius: 8, marginBottom: 16 }}>Error: {error}</div>}
           {loading && <div style={{ padding: 20 }}>Loading data...</div>}
 
-          {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} />}
+          {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} clinics={clinics} />}
           {!loading && page === 'accounts' && (
             selectedAccount
-              ? <AccountDetail account={selectedAccount} tests={tests} providers={providers} onBack={() => setSelectedAccount(null)} />
-              : <AccountsList accounts={accounts} tests={tests} onSelect={setSelectedAccount} />
+              ? <AccountDetail account={selectedAccount} tests={tests} providers={providers} clinics={clinics} onBack={() => setSelectedAccount(null)} />
+              : <AccountsList accounts={accounts} tests={tests} clinics={clinics} onSelect={setSelectedAccount} />
           )}
           {!loading && page === 'providers' && (
             selectedProvider
-              ? <ProviderDetail provider={selectedProvider} tests={tests} onBack={() => setSelectedProvider(null)} />
-              : <ProvidersList providers={providers} tests={tests} onSelect={setSelectedProvider} />
+              ? <ProviderDetail provider={selectedProvider} tests={tests} providers={providers} clinics={clinics} onBack={() => setSelectedProvider(null)} />
+              : <ProvidersList providers={providers} tests={tests} clinics={clinics} onSelect={setSelectedProvider} />
           )}
-          {!loading && page === 'reports' && <ReportsPage tests={tests} accounts={accounts} />}
+          {!loading && page === 'reports' && <ReportsPage tests={tests} accounts={accounts} clinics={clinics} />}
           {!loading && page === 'followups' && <FollowupsPage />}
           {!loading && page === 'expenses' && <ExpensesPage />}
           {!loading && page === 'prospects' && <ProspectsPage />}
@@ -131,14 +134,19 @@ export default function Dashboard({ session }) {
   )
 }
 
-function getProviderName(t) {
-  return t.provider_name || 'Unknown'
+function getProviderName(t, providers = []) {
+  if (t.provider_name) return t.provider_name
+  if (t.provider_id && providers.length) {
+    const match = providers.find(p => p.id === t.provider_id)
+    if (match) return `${match.last_name || ''}, ${match.first_name || ''} ${match.title || ''}`.trim()
+  }
+  return 'Unknown'
 }
 
-function getClinicName(t, accounts = []) {
+function getClinicName(t, clinics = []) {
   if (t.clinic_name) return t.clinic_name
-  if (t.clinic_id && accounts.length) {
-    const match = accounts.find(a => a.id === t.clinic_id || a.clinic_code === t.clinic_id)
+  if (t.clinic_id && clinics.length) {
+    const match = clinics.find(c => c.id === t.clinic_id)
     if (match?.name) return match.name
   }
   return '—'
@@ -149,16 +157,16 @@ function getPanel(t) {
 }
 
 function getCollected(t) {
-  const d = t.collected_at || t.collected
+  const d = t.collected || t.collected_at
   return d ? new Date(d).toLocaleDateString() : '—'
 }
 
-function DashboardHome({ accounts, providers, tests }) {
+function DashboardHome({ accounts, providers, tests, clinics }) {
   const totalTests = tests.length
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
   const activeAccounts = accounts.filter(a =>
-    tests.some(t => getClinicName(t, accounts) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collected || 0) > thirtyDaysAgo)
+    tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) !== '—' && new Date(t.collected || t.collected_at || 0) > thirtyDaysAgo)
   ).length
   const needsAttention = accounts.length - activeAccounts
 
@@ -166,7 +174,7 @@ function DashboardHome({ accounts, providers, tests }) {
 
   const topProviders = Object.entries(
     tests.reduce((acc, t) => {
-      const name = getProviderName(t)
+      const name = getProviderName(t, providers)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
@@ -174,7 +182,7 @@ function DashboardHome({ accounts, providers, tests }) {
 
   const topAccounts = Object.entries(
     tests.reduce((acc, t) => {
-      const name = getClinicName(t, accounts)
+      const name = getClinicName(t, clinics)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
@@ -255,21 +263,16 @@ function DashboardHome({ accounts, providers, tests }) {
                   <td style={{ padding: '8px 0' }}>{t.accession || t.accession_number || '—'}</td>
                   <td>{getCollected(t)}</td>
                   <td>{getPanel(t)}</td>
-                  <td>{getProviderName(t)}</td>
-                  <td>{getClinicName(t, accounts)}</td>
+                  <td>{getProviderName(t, providers)}</td>
+                  <td>{getClinicName(t, clinics)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
-          {recentTests[0] && (
-            <pre style={{ fontSize: 11, color: '#9ca3af', marginTop: 12, whiteSpace: 'pre-wrap' }}>
-              {JSON.stringify(recentTests[0], null, 2)}
-            </pre>
-          )}
         </Card>
 
         <Card title="Accounts Needing Attention">
-          {accounts.filter(a => !tests.some(t => getClinicName(t, accounts) === a.name && getCollected(t) !== '—' && new Date(t.collected_at || t.collected || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
+          {accounts.filter(a => !tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) !== '—' && new Date(t.collected || t.collected_at || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
             <div key={a.id || a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
               <span>{a.name}</span>
               <span style={{ color: '#ef4444', fontSize: 12 }}>30+</span>
@@ -298,7 +301,7 @@ function DashboardHome({ accounts, providers, tests }) {
   )
 }
 
-function AccountsList({ accounts, tests, onSelect }) {
+function AccountsList({ accounts, tests, clinics, onSelect }) {
   const [search, setSearch] = useState('')
   const filtered = accounts.filter(a =>
     (a.name || '').toLowerCase().includes(search.toLowerCase()) ||
@@ -320,8 +323,8 @@ function AccountsList({ accounts, tests, onSelect }) {
   )
 }
 
-function AccountDetail({ account, tests, providers, onBack }) {
-  const accountTests = tests.filter(t => getClinicName(t) === account.name)
+function AccountDetail({ account, tests, providers, clinics, onBack }) {
+  const accountTests = tests.filter(t => getClinicName(t, clinics) === account.name)
   const accountProviders = providers.filter(p => p.clinic_code === account.clinic_code)
   return (
     <div>
@@ -348,11 +351,11 @@ function AccountDetail({ account, tests, providers, onBack }) {
   )
 }
 
-function ProvidersList({ providers, tests, onSelect }) {
+function ProvidersList({ providers, tests, clinics, onSelect }) {
   const [search, setSearch] = useState('')
   const withCounts = providers.map(p => ({
     ...p,
-    count: tests.filter(t => getProviderName(t).includes(p.last_name)).length
+    count: tests.filter(t => getProviderName(t, providers).includes(p.last_name)).length
   })).sort((a, b) => b.count - a.count)
   const filtered = withCounts.filter(p =>
     `${p.last_name} ${p.first_name}`.toLowerCase().includes(search.toLowerCase())
@@ -376,8 +379,8 @@ function ProvidersList({ providers, tests, onSelect }) {
   )
 }
 
-function ProviderDetail({ provider, tests, onBack }) {
-  const providerTests = tests.filter(t => getProviderName(t).includes(provider.last_name))
+function ProviderDetail({ provider, tests, providers, clinics, onBack }) {
+  const providerTests = tests.filter(t => getProviderName(t, providers).includes(provider.last_name))
   return (
     <div>
       <button onClick={onBack} style={{ marginBottom: 16, padding: '6px 14px', borderRadius: 6, background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}>← Back</button>
@@ -394,7 +397,7 @@ function ProviderDetail({ provider, tests, onBack }) {
   )
 }
 
-function ReportsPage({ tests, accounts }) {
+function ReportsPage({ tests, accounts, clinics }) {
   return (
     <div>
       <h2>Reports</h2>
