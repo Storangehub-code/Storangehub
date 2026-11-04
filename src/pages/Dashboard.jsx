@@ -132,19 +132,19 @@ export default function Dashboard({ session }) {
 }
 
 function getProviderName(t) {
-  return t.provider_name || t.physician_name || t.doctor_name || t.provider || t.ordering_physician || 'Unknown'
+  return t.provider_name || 'Unknown'
 }
 
 function getClinicName(t) {
-  return t.clinic_name || t.practice_name || t.account_name || t.facility_name || t.clinic || '—'
+  return t.clinic_name || '—'
 }
 
 function getPanel(t) {
-  return t.panel || t.test_type || t.test_name || t.panel_name || t.order_type || '—'
+  return t.panel || t.test_type || '—'
 }
 
 function getCollected(t) {
-  const d = t.collected_at || t.collection_date || t.collected_date || t.date_collected || t.received_at
+  const d = t.collected_at || t.collected
   return d ? new Date(d).toLocaleDateString() : '—'
 }
 
