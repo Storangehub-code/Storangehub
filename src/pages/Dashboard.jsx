@@ -13,6 +13,7 @@ export default function Dashboard({ session }) {
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [dateRange, setDateRange] = useState({ start: null, end: null })
+  const [selectedMonth, setSelectedMonth] = useState(null)
 
   useEffect(() => {
     loadProfile()
@@ -89,7 +90,7 @@ export default function Dashboard({ session }) {
           <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
         </div>
         {nav.map(n => (
-          <div key={n.id} onClick={() => { setPage(n.id); setSelectedAccount(null); setSelectedProvider(null); setDateRange({ start: null, end: null }) }}
+          <div key={n.id} onClick={() => { setPage(n.id); setSelectedAccount(null); setSelectedProvider(null); setDateRange({ start: null, end: null }); setSelectedMonth(null) }}
             style={{ padding: '10px 16px', cursor: 'pointer', borderRadius: 8, marginBottom: 4, background: page === n.id ? '#0d9488' : 'transparent', fontSize: 14 }}>
             {n.label}
           </div>
@@ -117,6 +118,8 @@ export default function Dashboard({ session }) {
               clinics={clinics}
               dateRange={dateRange}
               setDateRange={setDateRange}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
               onSelectAccount={setSelectedAccount}
               onSelectProvider={setSelectedProvider}
               setPage={setPage}
@@ -201,7 +204,7 @@ function getMonthKey(date) {
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
 }
 
-function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDateRange, onSelectAccount, onSelectProvider, setPage }) {
+function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDateRange, selectedMonth, setSelectedMonth, onSelectAccount, onSelectProvider, setPage }) {
   const [recentPage, setRecentPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
 
@@ -209,20 +212,29 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
     const dates = tests.map(t => getCollected(t)).filter(Boolean)
     if (!dates.length) return { min: new Date(), max: new Date() }
     const min = new Date(Math.min(...dates))
-    const max = new Date(Math.max(...dates))
+    const max = new Date() // today
     return { min, max }
   }, [tests])
 
   const filteredTests = useMemo(() => {
-    if (!dateRange.start && !dateRange.end) return tests
-    return tests.filter(t => {
-      const d = getCollected(t)
-      if (!d) return false
-      if (dateRange.start && d < dateRange.start) return false
-      if (dateRange.end && d > dateRange.end) return false
-      return true
-    })
-  }, [tests, dateRange])
+    let result = tests
+    if (dateRange.start || dateRange.end) {
+      result = result.filter(t => {
+        const d = getCollected(t)
+        if (!d) return false
+        if (dateRange.start && d < dateRange.start) return false
+        if (dateRange.end && d > dateRange.end) return false
+        return true
+      })
+    }
+    if (selectedMonth) {
+      result = result.filter(t => {
+        const d = getCollected(t)
+        return d && getMonthKey(d) === selectedMonth
+      })
+    }
+    return result
+  }, [tests, dateRange, selectedMonth])
 
   const monthlyVolume = useMemo(() => {
     const map = {}
@@ -233,7 +245,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       map[key] = (map[key] || 0) + 1
     })
     const months = Object.keys(map).sort()
-    return months.map(m => ({ month: m, count: map[m] || 0 }))
+    return months.slice(-6).map(m => ({ month: m, count: map[m] || 0 }))
   }, [tests])
 
   const maxVolume = Math.max(...monthlyVolume.map(m => m.count), 1)
@@ -275,31 +287,35 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
 
   const estimatedRevenue = totalTests * 125
 
-  const rangeLabel = dateRange.start || dateRange.end
-    ? `${dateRange.start ? dateRange.start.toLocaleDateString() : 'Start'} – ${dateRange.end ? dateRange.end.toLocaleDateString() : 'End'}`
-    : 'All Time'
+  const rangeLabel = selectedMonth
+    ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : (dateRange.start || dateRange.end
+        ? `${dateRange.start ? dateRange.start.toLocaleDateString() : 'Start'} – ${dateRange.end ? dateRange.end.toLocaleDateString() : 'End'}`
+        : 'All Time')
 
   function handleRangeChange(e, which) {
     const val = e.target.valueAsNumber
     if (!val) return
     const d = new Date(val)
     setDateRange(prev => ({ ...prev, [which]: d }))
+    setSelectedMonth(null)
   }
 
   return (
     <div>
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
-        <div style={{ fontSize: 13, color: '#9ca3af' }}>{rangeLabel}</div>
+        <div style={{ fontSize: 13, color: '#9ca3af' }}>{rangeLabel} · Click a month on the chart to filter</div>
       </div>
 
       <div style={{ background: '#1f2937', padding: 16, borderRadius: 12, marginBottom: 20 }}>
         <div style={{ fontSize: 13, marginBottom: 8 }}>Date of Service</div>
         <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-          <input type="date" value={dateRange.start ? dateRange.start.toISOString().split('T')[0] : ''} onChange={e => handleRangeChange(e, 'start')} style={{ padding: 6, borderRadius: 6, border: '1px solid #374151', background: '#111827', color: 'white' }} />
+          <input type="date" value={dateRange.start ? dateRange.start.toISOString().split('T')[0] : allDates.min.toISOString().split('T')[0]} onChange={e => handleRangeChange(e, 'start')} style={{ padding: 6, borderRadius: 6, border: '1px solid #374151', background: '#111827', color: 'white' }} />
+          <input type="range" min={allDates.min.getTime()} max={allDates.max.getTime()} value={dateRange.start ? dateRange.start.getTime() : allDates.min.getTime()} onChange={e => setDateRange(prev => ({ ...prev, start: new Date(Number(e.target.value)) }))} style={{ flex: 1 }} />
           <input type="range" min={allDates.min.getTime()} max={allDates.max.getTime()} value={dateRange.end ? dateRange.end.getTime() : allDates.max.getTime()} onChange={e => setDateRange(prev => ({ ...prev, end: new Date(Number(e.target.value)) }))} style={{ flex: 1 }} />
-          <input type="date" value={dateRange.end ? dateRange.end.toISOString().split('T')[0] : ''} onChange={e => handleRangeChange(e, 'end')} style={{ padding: 6, borderRadius: 6, border: '1px solid #374151', background: '#111827', color: 'white' }} />
-          <button onClick={() => setDateRange({ start: null, end: null })} style={{ padding: '6px 12px', borderRadius: 6, background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}>Reset</button>
+          <input type="date" value={dateRange.end ? dateRange.end.toISOString().split('T')[0] : allDates.max.toISOString().split('T')[0]} onChange={e => handleRangeChange(e, 'end')} style={{ padding: 6, borderRadius: 6, border: '1px solid #374151', background: '#111827', color: 'white' }} />
+          <button onClick={() => { setDateRange({ start: null, end: null }); setSelectedMonth(null) }} style={{ padding: '6px 12px', borderRadius: 6, background: '#374151', color: 'white', border: 'none', cursor: 'pointer' }}>Reset</button>
         </div>
       </div>
 
@@ -312,12 +328,12 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.8fr 0.9fr', gap: 16, marginBottom: 16 }}>
-        <Card title="Monthly Testing Volume">
-          <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 6, paddingTop: 10, overflowX: 'auto' }}>
+        <Card title="Monthly Testing Volume (Last 6 Months)">
+          <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, paddingTop: 10 }}>
             {monthlyVolume.map(({ month, count }) => (
-              <div key={month} style={{ flex: '0 0 40px', textAlign: 'center' }}>
-                <div style={{ height: Math.max(8, (count / maxVolume) * 150), background: '#0d9488', borderRadius: 4, marginBottom: 6 }} />
-                <div style={{ fontSize: 10, color: '#9ca3af' }}>{new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</div>
+              <div key={month} onClick={() => setSelectedMonth(selectedMonth === month ? null : month)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+                <div style={{ height: Math.max(8, (count / maxVolume) * 150), background: selectedMonth === month ? '#14b8a6' : '#0d9488', borderRadius: 4, marginBottom: 6, transition: 'height 0.2s' }} />
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</div>
               </div>
             ))}
           </div>
