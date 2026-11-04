@@ -1289,47 +1289,76 @@ function Reports({ clinics, tests, providers, onSelectClinic, onSelectProvider, 
 }
 
 function Training({ role }) {
-  const [docs, setDocs] = useState([
-    { name: 'Requisition Form', type: 'Global', category: 'Forms' },
-    { name: 'SynoviFact Overview', type: 'Global', category: 'Product' },
-    { name: 'Expense Policy', type: 'Global', category: 'Policies' }
-  ])
+  const [docs, setDocs] = useState([])
   const [name, setName] = useState('')
-  const [category, setCategory] = useState('General')
-  const canUpload = role === 'global_admin' || role === 'manager'
-
-  function addDoc() {
-    if (!name.trim()) return
-    setDocs([...docs, { name, type: role === 'global_admin' ? 'Global' : 'Team', category }])
+  const [category, setCategory] = useState('Important Docs')
+  const [file, setFile] = useState(null)
+  const [confirmDel, setConfirmDel] = useState(null)
+  const canUpload = role === 'global_admin'
+  useEffect(() => {
+    supabase.from('training_docs').select('*').order('created_at', { ascending: false }).then(({ data }) => setDocs(data || []))
+  }, [])
+  async function addDoc() {
+    if (!name.trim() || !file) return alert('Name and file required')
+    const path = 'training/' + Date.now() + '-' + file.name
+    const { error: upErr } = await supabase.storage.from('docs').upload(path, file)
+    if (upErr) return alert(upErr.message)
+    const { error } = await supabase.from('training_docs').insert({ name, category, path })
+    if (error) return alert(error.message)
     setName('')
+    setFile(null)
+    supabase.from('training_docs').select('*').order('created_at', { ascending: false }).then(({ data }) => setDocs(data || []))
   }
-
-  const categories = [...new Set(docs.map(d => d.category))]
+  async function deleteDoc(doc) {
+    await supabase.storage.from('docs').remove([doc.path])
+    await supabase.from('training_docs').delete().eq('id', doc.id)
+    setConfirmDel(null)
+    supabase.from('training_docs').select('*').order('created_at', { ascending: false }).then(({ data }) => setDocs(data || []))
+  }
+  async function openDoc(doc) {
+    const { data } = await supabase.storage.from('docs').createSignedUrl(doc.path, 60)
+    if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+  }
+  const categories = ['Important Docs', 'Requisitions', 'Training Materials']
 
   return (
     <div>
       {canUpload && (
         <div className="card" style={{ marginBottom: 16 }}>
-          <div style={{ display: 'flex', gap: 8 }}>
+          <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
             <input value={name} onChange={e => setName(e.target.value)} placeholder="Document name" style={{ flex: 1 }} />
             <select value={category} onChange={e => setCategory(e.target.value)}>
-              <option>General</option><option>Forms</option><option>Product</option><option>Policies</option><option>Onboarding</option>
+              {categories.map(c => <option key={c}>{c}</option>)}
             </select>
-            <button className="btn" onClick={addDoc}>Add</button>
+            <input type="file" onChange={e => setFile(e.target.files[0])} />
+            <button className="btn" onClick={addDoc}>Upload</button>
           </div>
         </div>
       )}
       {categories.map(cat => (
         <div key={cat} className="card" style={{ marginBottom: 12 }}>
           <h3 style={{ marginBottom: 8, fontSize: 13, color: '#9ca3af', textTransform: 'uppercase' }}>{cat}</h3>
-          {docs.filter(d => d.category === cat).map((d, i) => (
-            <div key={i} style={{ padding: '10px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between' }}>
-              <span>{d.name}</span>
-              <span className="badge" style={{ background: d.type === 'Global' ? '#0d9488' : '#334155' }}>{d.type}</span>
+          {docs.filter(d => d.category === cat).map(d => (
+            <div key={d.id} style={{ padding: '10px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+              <span style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => openDoc(d)}>{d.name}</span>
+              {canUpload && <button className="btn secondary btn-sm" onClick={() => setConfirmDel(d)}>Delete</button>}
             </div>
           ))}
+          {!docs.filter(d => d.category === cat).length && <p style={{ color: '#6b7280', fontSize: 13 }}>No documents</p>}
         </div>
       ))}
+      {confirmDel && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setConfirmDel(null)}>
+          <div className="card" style={{ maxWidth: 360, textAlign: 'center' }} onClick={e => e.stopPropagation()}>
+            <h3 style={{ marginBottom: 12 }}>Are you sure?</h3>
+            <p style={{ color: '#9ca3af', marginBottom: 16 }}>Delete "{confirmDel.name}"?</p>
+            <div style={{ display: 'flex', gap: 8, justifyContent: 'center' }}>
+              <button className="btn secondary" onClick={() => setConfirmDel(null)}>Cancel</button>
+              <button className="btn" style={{ background: '#ef4444' }} onClick={() => deleteDoc(confirmDel)}>Delete</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   )
 }
