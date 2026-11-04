@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function Dashboard({ session }) {
@@ -12,6 +12,7 @@ export default function Dashboard({ session }) {
   const [error, setError] = useState(null)
   const [selectedAccount, setSelectedAccount] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
+  const [selectedMonth, setSelectedMonth] = useState(null)
 
   useEffect(() => {
     loadProfile()
@@ -88,7 +89,7 @@ export default function Dashboard({ session }) {
           <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
         </div>
         {nav.map(n => (
-          <div key={n.id} onClick={() => { setPage(n.id); setSelectedAccount(null); setSelectedProvider(null) }}
+          <div key={n.id} onClick={() => { setPage(n.id); setSelectedAccount(null); setSelectedProvider(null); setSelectedMonth(null) }}
             style={{ padding: '10px 16px', cursor: 'pointer', borderRadius: 8, marginBottom: 4, background: page === n.id ? '#0d9488' : 'transparent', fontSize: 14 }}>
             {n.label}
           </div>
@@ -108,7 +109,19 @@ export default function Dashboard({ session }) {
           {error && <div style={{ background: '#7f1d1d', padding: 16, borderRadius: 8, marginBottom: 16 }}>Error: {error}</div>}
           {loading && <div style={{ padding: 20 }}>Loading data...</div>}
 
-          {!loading && page === 'dashboard' && <DashboardHome accounts={accounts} providers={providers} tests={tests} clinics={clinics} />}
+          {!loading && page === 'dashboard' && (
+            <DashboardHome
+              accounts={accounts}
+              providers={providers}
+              tests={tests}
+              clinics={clinics}
+              selectedMonth={selectedMonth}
+              setSelectedMonth={setSelectedMonth}
+              onSelectAccount={setSelectedAccount}
+              onSelectProvider={setSelectedProvider}
+              setPage={setPage}
+            />
+          )}
           {!loading && page === 'accounts' && (
             selectedAccount
               ? <AccountDetail account={selectedAccount} tests={tests} providers={providers} clinics={clinics} onBack={() => setSelectedAccount(null)} />
@@ -180,22 +193,63 @@ function getPanel(t) {
 
 function getCollected(t) {
   const d = t.collected || t.collected_at
-  return d ? new Date(d).toLocaleDateString() : '—'
+  return d ? new Date(d) : null
 }
 
-function DashboardHome({ accounts, providers, tests, clinics }) {
-  const totalTests = tests.length
+function getMonthKey(date) {
+  if (!date) return null
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
+}
+
+function DashboardHome({ accounts, providers, tests, clinics, selectedMonth, setSelectedMonth, onSelectAccount, onSelectProvider, setPage }) {
+  const [recentPage, setRecentPage] = useState(0)
+  const [attentionPage, setAttentionPage] = useState(0)
+
+  const filteredTests = useMemo(() => {
+    if (!selectedMonth) return tests
+    return tests.filter(t => {
+      const d = getCollected(t)
+      return d && getMonthKey(d) === selectedMonth
+    })
+  }, [tests, selectedMonth])
+
+  const months = useMemo(() => {
+    const set = new Set()
+    tests.forEach(t => {
+      const d = getCollected(t)
+      if (d) set.add(getMonthKey(d))
+    })
+    return Array.from(set).sort().reverse()
+  }, [tests])
+
+  const monthlyVolume = useMemo(() => {
+    const map = {}
+    tests.forEach(t => {
+      const d = getCollected(t)
+      if (!d) return
+      const key = getMonthKey(d)
+      map[key] = (map[key] || 0) + 1
+    })
+    return months.map(m => ({ month: m, count: map[m] || 0 })).slice(0, 7).reverse()
+  }, [tests, months])
+
+  const maxVolume = Math.max(...monthlyVolume.map(m => m.count), 1)
+
+  const totalTests = filteredTests.length
   const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000)
 
   const activeAccounts = accounts.filter(a =>
-    tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) !== '—' && new Date(t.collected || t.collected_at || 0) > thirtyDaysAgo)
+    tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) && getCollected(t) > thirtyDaysAgo)
   ).length
   const needsAttention = accounts.length - activeAccounts
 
-  const recentTests = tests.slice(0, 10)
+  const recentTests = filteredTests.slice(recentPage * 10, (recentPage + 1) * 10)
+  const attentionAccounts = accounts.filter(a =>
+    !tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) && getCollected(t) > thirtyDaysAgo)
+  ).slice(attentionPage * 10, (attentionPage + 1) * 10)
 
   const topProviders = Object.entries(
-    tests.reduce((acc, t) => {
+    filteredTests.reduce((acc, t) => {
       const name = getProviderName(t, providers)
       acc[name] = (acc[name] || 0) + 1
       return acc
@@ -203,14 +257,14 @@ function DashboardHome({ accounts, providers, tests, clinics }) {
   ).sort((a, b) => b[1] - a[1]).slice(0, 8)
 
   const topAccounts = Object.entries(
-    tests.reduce((acc, t) => {
+    filteredTests.reduce((acc, t) => {
       const name = getClinicName(t, clinics)
       acc[name] = (acc[name] || 0) + 1
       return acc
     }, {})
   ).sort((a, b) => b[1] - a[1]).slice(0, 5)
 
-  const panelCounts = tests.reduce((acc, t) => {
+  const panelCounts = filteredTests.reduce((acc, t) => {
     const panel = getPanel(t)
     acc[panel] = (acc[panel] || 0) + 1
     return acc
@@ -218,15 +272,29 @@ function DashboardHome({ accounts, providers, tests, clinics }) {
 
   const estimatedRevenue = totalTests * 125
 
+  const monthLabel = selectedMonth
+    ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    : 'All Time'
+
   return (
     <div>
-      <div style={{ marginBottom: 20 }}>
-        <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
-        <div style={{ fontSize: 13, color: '#9ca3af' }}>Live data · Salesperson shown on clinic detail where available</div>
+      <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+        <div>
+          <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
+          <div style={{ fontSize: 13, color: '#9ca3af' }}>{monthLabel} · Click a month on the chart to filter</div>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <button onClick={() => setSelectedMonth(null)} style={{ padding: '6px 12px', borderRadius: 6, background: selectedMonth ? '#374151' : '#0d9488', color: 'white', border: 'none', cursor: 'pointer' }}>All</button>
+          {months.slice(0, 6).map(m => (
+            <button key={m} onClick={() => setSelectedMonth(m)} style={{ padding: '6px 12px', borderRadius: 6, background: selectedMonth === m ? '#0d9488' : '#374151', color: 'white', border: 'none', cursor: 'pointer', fontSize: 13 }}>
+              {new Date(m + '-01').toLocaleDateString('en-US', { month: 'short' })}
+            </button>
+          ))}
+        </div>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))', gap: 14, marginBottom: 24 }}>
-        <KpiCard value={totalTests.toLocaleString()} label="Tests (All)" sub="Live total" />
+        <KpiCard value={totalTests.toLocaleString()} label="Tests" sub={monthLabel} />
         <KpiCard value={activeAccounts} label="Active Accounts" sub="Ordered in last 30 days" />
         <KpiCard value={providers.length} label="Providers" />
         <KpiCard value={`$${estimatedRevenue.toLocaleString()}`} label="Est. Test Revenue" sub="$125 / test" />
@@ -235,15 +303,14 @@ function DashboardHome({ accounts, providers, tests, clinics }) {
 
       <div style={{ display: 'grid', gridTemplateColumns: '1.3fr 0.8fr 0.9fr', gap: 16, marginBottom: 16 }}>
         <Card title="Monthly Testing Volume">
-          <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 12, paddingTop: 10 }}>
-            {['Apr','May','Jun','Jul','Aug','Sep','Oct'].map((m, i) => (
-              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
-                <div style={{ height: 40 + i * 18, background: '#0d9488', borderRadius: 4, marginBottom: 6 }} />
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>{m}</div>
+          <div style={{ height: 180, display: 'flex', alignItems: 'flex-end', gap: 8, paddingTop: 10 }}>
+            {monthlyVolume.map(({ month, count }) => (
+              <div key={month} onClick={() => setSelectedMonth(month)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+                <div style={{ height: Math.max(8, (count / maxVolume) * 150), background: selectedMonth === month ? '#14b8a6' : '#0d9488', borderRadius: 4, marginBottom: 6, transition: 'height 0.2s' }} />
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(month + '-01').toLocaleDateString('en-US', { month: 'short' })}</div>
               </div>
             ))}
           </div>
-          <div style={{ fontSize: 12, color: '#9ca3af', marginTop: 8 }}>Placeholder chart — monthly breakdown coming next</div>
         </Card>
 
         <Card title="Tests by Panel">
@@ -259,7 +326,7 @@ function DashboardHome({ accounts, providers, tests, clinics }) {
 
         <Card title="Top Providers by Testing Volume">
           {topProviders.map(([name, count]) => (
-            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
+            <div key={name} onClick={() => { const p = providers.find(pr => formatProviderName(pr) === name || name.includes(pr.last_name)); if (p) { onSelectProvider(p); setPage('providers') } }} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #374151', fontSize: 13, cursor: 'pointer' }}>
               <span>{name}</span>
               <strong>{count}</strong>
             </div>
@@ -283,30 +350,40 @@ function DashboardHome({ accounts, providers, tests, clinics }) {
               {recentTests.map((t, i) => (
                 <tr key={t.accession || i} style={{ borderTop: '1px solid #374151' }}>
                   <td style={{ padding: '8px 0' }}>{t.accession || t.accession_number || '—'}</td>
-                  <td>{getCollected(t)}</td>
+                  <td>{getCollected(t) ? getCollected(t).toLocaleDateString() : '—'}</td>
                   <td>{getPanel(t)}</td>
-                  <td>{getProviderName(t, providers)}</td>
-                  <td>{getClinicName(t, clinics)}</td>
+                  <td style={{ cursor: 'pointer' }} onClick={() => { const p = providers.find(pr => getProviderName(t, providers).includes(pr.last_name)); if (p) { onSelectProvider(p); setPage('providers') } }}>{getProviderName(t, providers)}</td>
+                  <td style={{ cursor: 'pointer' }} onClick={() => { const a = accounts.find(acc => getClinicName(t, clinics) === acc.name); if (a) { onSelectAccount(a); setPage('accounts') } }}>{getClinicName(t, clinics)}</td>
                 </tr>
               ))}
             </tbody>
           </table>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 13 }}>
+            <button disabled={recentPage === 0} onClick={() => setRecentPage(p => p - 1)} style={{ padding: '4px 10px', borderRadius: 4, background: '#374151', color: 'white', border: 'none', cursor: recentPage === 0 ? 'default' : 'pointer', opacity: recentPage === 0 ? 0.5 : 1 }}>Prev</button>
+            <span>Page {recentPage + 1}</span>
+            <button disabled={recentTests.length < 10} onClick={() => setRecentPage(p => p + 1)} style={{ padding: '4px 10px', borderRadius: 4, background: '#374151', color: 'white', border: 'none', cursor: recentTests.length < 10 ? 'default' : 'pointer', opacity: recentTests.length < 10 ? 0.5 : 1 }}>Next</button>
+          </div>
         </Card>
 
         <Card title="Accounts Needing Attention">
-          {accounts.filter(a => !tests.some(t => getClinicName(t, clinics) === a.name && getCollected(t) !== '—' && new Date(t.collected || t.collected_at || 0) > thirtyDaysAgo)).slice(0, 6).map(a => (
-            <div key={a.id || a.name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
+          {attentionAccounts.map(a => (
+            <div key={a.id || a.name} onClick={() => { onSelectAccount(a); setPage('accounts') }} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13, cursor: 'pointer' }}>
               <span>{a.name}</span>
               <span style={{ color: '#ef4444', fontSize: 12 }}>30+</span>
             </div>
           ))}
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 12, fontSize: 13 }}>
+            <button disabled={attentionPage === 0} onClick={() => setAttentionPage(p => p - 1)} style={{ padding: '4px 10px', borderRadius: 4, background: '#374151', color: 'white', border: 'none', cursor: attentionPage === 0 ? 'default' : 'pointer', opacity: attentionPage === 0 ? 0.5 : 1 }}>Prev</button>
+            <span>Page {attentionPage + 1}</span>
+            <button disabled={attentionAccounts.length < 10} onClick={() => setAttentionPage(p => p + 1)} style={{ padding: '4px 10px', borderRadius: 4, background: '#374151', color: 'white', border: 'none', cursor: attentionAccounts.length < 10 ? 'default' : 'pointer', opacity: attentionAccounts.length < 10 ? 0.5 : 1 }}>Next</button>
+          </div>
         </Card>
       </div>
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
         <Card title="Top Performing Accounts">
           {topAccounts.map(([name, count]) => (
-            <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
+            <div key={name} onClick={() => { const a = accounts.find(acc => acc.name === name); if (a) { onSelectAccount(a); setPage('accounts') } }} style={{ display: 'flex', justifyContent: 'space-between', padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13, cursor: 'pointer' }}>
               <span>{name}</span>
               <strong>{count}</strong>
             </div>
@@ -364,7 +441,7 @@ function AccountDetail({ account, tests, providers, clinics, onBack }) {
         <Card title={`Recent Tests (${accountTests.length})`}>
           {accountTests.slice(0, 10).map(t => (
             <div key={t.accession} style={{ padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
-              {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t)}
+              {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t) ? getCollected(t).toLocaleDateString() : '—'}
             </div>
           ))}
         </Card>
@@ -411,7 +488,7 @@ function ProviderDetail({ provider, tests, providers, clinics, onBack }) {
       <Card title={`Tests (${providerTests.length})`} style={{ marginTop: 20 }}>
         {providerTests.slice(0, 15).map(t => (
           <div key={t.accession} style={{ padding: '8px 0', borderBottom: '1px solid #374151', fontSize: 13 }}>
-            {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t)}
+            {t.accession || t.accession_number} · {getPanel(t)} · {getCollected(t) ? getCollected(t).toLocaleDateString() : '—'}
           </div>
         ))}
       </Card>
