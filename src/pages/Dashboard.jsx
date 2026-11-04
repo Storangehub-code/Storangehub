@@ -136,27 +136,28 @@ export default function Dashboard({ session }) {
 
 function formatProviderName(p) {
   if (!p) return 'Unknown'
-  const last = p.last_name || ''
-  const first = p.first_name || ''
-  const title = p.title || ''
+  const last = (p.last_name || '').trim()
+  const first = (p.first_name || '').trim()
+  const title = (p.title || '').trim()
   return `${last}, ${first}${title ? ' ' + title : ''}`.replace(/\s+/g, ' ').trim()
 }
 
-function getProviderName(t, providers = []) {
-  if (t.provider_name) {
-    // Try to reformat existing provider_name if it looks like "Last, Title First"
-    const parts = t.provider_name.split(',').map(s => s.trim())
-    if (parts.length === 2) {
-      const nameParts = parts[1].split(' ')
-      if (nameParts.length >= 2 && (nameParts[0].length <= 5 || nameParts[0].endsWith('.'))) {
-        // Looks like "Last, MD First" -> swap to "Last, First MD"
-        const title = nameParts[0]
-        const first = nameParts.slice(1).join(' ')
-        return `${parts[0]}, ${first} ${title}`.trim()
-      }
+function reorderName(name) {
+  if (!name) return 'Unknown'
+  const parts = name.split(',').map(s => s.trim())
+  if (parts.length === 2) {
+    const rest = parts[1].split(' ')
+    if (rest.length >= 2 && (rest[0].length <= 5 || rest[0].endsWith('.'))) {
+      const title = rest[0]
+      const first = rest.slice(1).join(' ')
+      return `${parts[0]}, ${first} ${title}`.trim()
     }
-    return t.provider_name
   }
+  return name
+}
+
+function getProviderName(t, providers = []) {
+  if (t.provider_name) return reorderName(t.provider_name)
   if (t.provider_id && providers.length) {
     const match = providers.find(p => p.id === t.provider_id)
     if (match) return formatProviderName(match)
