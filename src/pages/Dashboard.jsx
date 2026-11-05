@@ -1862,17 +1862,15 @@ function ManagersList() {
 function Users() {
   const [users, setUsers] = useState([])
   const [editing, setEditing] = useState(null)
-  const [form, setForm] = useState({ full_name: '', role: 'rep', phone: '', email: '' })
+  const [form, setForm] = useState({ full_name: '', email: '', home_address: '' })
   const protectedIds = ['3fac6f60-da66-47cd-9770-d0830a9f6802', 'fdc1e445-e0bc-4ba8-b96e-bb21618faffe', '47ed75c5-e011-4471-9658-eb1ad63553eb']
   useEffect(() => { supabase.from('profiles').select('*').then(({ data }) => setUsers(data || [])) }, [])
 
   async function save() {
-    if (!form.full_name.trim()) return
-    if (editing) {
-      await supabase.from('profiles').update(form).eq('id', editing)
-    }
+    if (!form.full_name.trim() || !editing) return
+    await supabase.from('profiles').update({ full_name: form.full_name, email: form.email, home_address: form.home_address }).eq('id', editing)
     setEditing(null)
-    setForm({ full_name: '', role: 'rep', phone: '', email: '' })
+    setForm({ full_name: '', email: '', home_address: '' })
     supabase.from('profiles').select('*').then(({ data }) => setUsers(data || []))
   }
 
@@ -1882,8 +1880,15 @@ function Users() {
     supabase.from('profiles').select('*').then(({ data }) => setUsers(data || []))
   }
 
+  async function resetPassword(email) {
+    if (!email) return alert('No email on file')
+    const { error } = await supabase.auth.resetPasswordForEmail(email)
+    if (error) alert('Error: ' + error.message)
+    else alert('Password reset email sent to ' + email)
+  }
+
   function startEdit(u) {
-    setForm({ full_name: u.full_name || '', role: u.role || 'rep', phone: u.phone || '', email: u.email || '' })
+    setForm({ full_name: u.full_name || '', email: u.email || '', home_address: u.home_address || '' })
     setEditing(u.id)
   }
 
@@ -1917,17 +1922,11 @@ function Users() {
           <h3 style={{ marginBottom: 12 }}>Edit User</h3>
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Name</label><input value={form.full_name} onChange={e => setForm({...form, full_name: e.target.value})} /></div>
-            <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Role</label>
-              <select value={form.role} onChange={e => setForm({...form, role: e.target.value})}>
-                <option value="rep">Rep</option>
-                <option value="manager">Manager</option>
-                <option value="global_admin">Global Admin</option>
-              </select>
-            </div>
-            <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Phone</label><input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
             <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Email</label><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
+            <div style={{ gridColumn: 'span 2' }}><label style={{ fontSize: 13, color: '#9ca3af' }}>Home Address</label><input value={form.home_address} onChange={e => setForm({...form, home_address: e.target.value})} /></div>
           </div>
           <button className="btn" onClick={save}>Save</button>
+          <button className="btn secondary" onClick={() => resetPassword(form.email)} style={{ marginLeft: 8 }}>Reset Password</button>
           <button className="btn secondary" onClick={() => setEditing(null)} style={{ marginLeft: 8 }}>Cancel</button>
         </div>
       )}
