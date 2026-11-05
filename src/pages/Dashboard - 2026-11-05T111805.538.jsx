@@ -201,13 +201,12 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <span>{formatDate(startDate)}</span>
           <span>{formatDate(endDate)}</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-          <input type="range" min={earliestDate || '2020-01-01'} max={endDate} value={startDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1, accentColor: '#14b8a6' }} />
-          <input type="range" min={startDate} max={latestDate} value={endDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1, accentColor: '#3b82f6' }} />
-        </div>
-        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
-          <input type="date" value={startDate} min={earliestDate || '2020-01-01'} max={endDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
-          <input type="date" value={endDate} min={startDate} max={latestDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
+        <div style={{ position: 'relative', height: 30 }}>
+          <div style={{ position: 'absolute', top: 13, left: 0, right: 0, height: 4, background: '#374151', borderRadius: 2 }}></div>
+          <div style={{ position: 'absolute', top: 13, left: `${((new Date(startDate) - new Date(earliestDate || '2020-01-01')) / (new Date(latestDate) - new Date(earliestDate || '2020-01-01'))) * 100}%`, width: `${Math.max(0, ((new Date(endDate) - new Date(startDate)) / (new Date(latestDate) - new Date(earliestDate || '2020-01-01'))) * 100)}%`, height: 4, background: '#14b8a6', borderRadius: 2 }}></div>
+          <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={startDate} onChange={e => { const v = e.target.value; if (v <= endDate) setDateRange({ ...dateRange, start: v }) }} style={{ position: 'absolute', width: '100%', top: 0, background: 'transparent', appearance: 'none', pointerEvents: 'none', zIndex: 3 }} />
+          <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={endDate} onChange={e => { const v = e.target.value; if (v >= startDate) setDateRange({ ...dateRange, end: v }) }} style={{ position: 'absolute', width: '100%', top: 0, background: 'transparent', appearance: 'none', pointerEvents: 'none', zIndex: 4 }} />
+          <style>{`input[type=range]::-webkit-slider-thumb { pointer-events: auto; appearance: none; width: 16px; height: 16px; background: #14b8a6; border-radius: 50%; cursor: pointer; }`}</style>
         </div>
       </div>
       <div className="kpi-grid">
