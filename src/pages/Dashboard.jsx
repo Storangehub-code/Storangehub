@@ -332,7 +332,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
         <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
         <div style={{ fontSize: 13, color: '#9ca3af' }}>{rangeLabel} · Click a month on the chart to filter</div>
       <div style={{ background: '#fbbf24', color: '#000', padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 12 }}>
-        DEBUG: {tests.slice(0, 3).map(t => `${t.accession || t.id}: raw=${String(t.collected || t.collected_at)} → month=${getMonthFromTest(t)}`).join(' | ')}
+        DEBUG: selectedMonth={selectedMonth || 'none'} | filtered={filteredTests.length} | sample={tests.slice(0, 3).map(t => `${t.accession}: ${getMonthFromTest(t)}`).join(', ')}
       </div>
       </div>
 
