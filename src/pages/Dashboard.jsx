@@ -195,8 +195,16 @@ function getPanel(t) {
 }
 
 function getCollected(t) {
-  const d = t.collected || t.collected_at
-  return d ? new Date(d) : null
+  const raw = t.collected || t.collected_at
+  if (!raw) return null
+  // Prefer date-only portion to avoid timezone shifts
+  const dateOnly = String(raw).split('T')[0].split(' ')[0]
+  if (/^\d{4}-\d{2}-\d{2}$/.test(dateOnly)) {
+    const [y, m, d] = dateOnly.split('-').map(Number)
+    return new Date(y, m - 1, d)
+  }
+  const d = new Date(raw)
+  return isNaN(d.getTime()) ? null : d
 }
 
 function getMonthKey(date) {
