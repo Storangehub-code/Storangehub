@@ -210,9 +210,18 @@ function getCollected(t) {
 function getMonthFromTest(t) {
   const raw = t.collected || t.collected_at
   if (!raw) return null
+
+  // If it's already a Date object
+  if (raw instanceof Date && !isNaN(raw.getTime())) {
+    return `${raw.getFullYear()}-${String(raw.getMonth() + 1).padStart(2, '0')}`
+  }
+
   const s = String(raw)
+  // Extract YYYY-MM from the start of the string
   const match = s.match(/^(\d{4}-\d{2})/)
   if (match) return match[1]
+
+  // Fallback: try parsing
   const d = getCollected(t)
   return d ? getMonthKey(d) : null
 }
