@@ -105,7 +105,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         
-        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} />}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} setPage={setPage} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} userId={session.user.id} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} role={role} />}
@@ -129,7 +129,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps, onSelectClinic, onSelectProvider }) {
+function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps, onSelectClinic, onSelectProvider, setPage }) {
   const filteredClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
   const filteredProviders = selectedReps?.length > 0 ? providers.filter(p => filteredClinics.some(c => c.id === p.clinic_id)) : providers
   const filteredTests = selectedReps?.length > 0 ? tests.filter(t => filteredClinics.some(c => c.id === t.clinic_id)) : tests
@@ -245,7 +245,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Top Providers</h3>
           {topProviders.map((p, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => p.id && onSelectProvider(p)}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => { if (p.id) { onSelectProvider(p); setPage('providers') } }}>
               <span style={{ color: '#14b8a6' }}>{formatName(p.name)}</span><span>{p.count}</span>
             </div>
           ))}
@@ -263,7 +263,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
                   <td>{t.accession}</td>
                   <td>{formatDate(t.collected_at || t.collected || t.collected_date)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type || t.panel || '—'}</td>
-                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c) onSelectClinic(c) }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c) { onSelectClinic(c); setPage('accounts') } }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -280,7 +280,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Accounts Needing Attention</h3>
           {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).slice(attentionPage * 10, (attentionPage + 1) * 10).map(c => (
-            <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => onSelectClinic(c)}>
+            <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => { onSelectClinic(c); setPage('accounts') }}>
               <span style={{ color: '#14b8a6' }}>{c.name}</span><span style={{ color: '#ef4444' }}>30+</span>
             </div>
           ))}
@@ -298,7 +298,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Top Performing Accounts</h3>
           {topAccounts.map((a, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => a.id && onSelectClinic(a)}>
+            <div key={i} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => { if (a.id) { onSelectClinic(a); setPage('accounts') } }}>
               <span style={{ color: '#14b8a6' }}>{a.name}</span><span>{a.count}</span>
             </div>
           ))}
