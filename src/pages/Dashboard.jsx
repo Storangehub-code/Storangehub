@@ -240,12 +240,20 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
     const map = {}
     tests.forEach(t => {
       const d = getCollected(t)
-      if (!d) return
+      if (!d || isNaN(d.getTime())) return
       const key = getMonthKey(d)
-      map[key] = (map[key] || 0) + 1
+      if (key) map[key] = (map[key] || 0) + 1
     })
-    const months = Object.keys(map).sort()
-    return months.slice(-6).map(m => ({ month: m, count: map[m] || 0 }))
+
+    // Always show the last 6 months from today
+    const result = []
+    const now = new Date()
+    for (let i = 5; i >= 0; i--) {
+      const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
+      const key = getMonthKey(d)
+      result.push({ month: key, count: map[key] || 0 })
+    }
+    return result
   }, [tests])
 
   const maxVolume = Math.max(...monthlyVolume.map(m => m.count), 1)
