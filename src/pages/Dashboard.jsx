@@ -114,7 +114,7 @@ export default function Dashboard({ session }) {
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} role={role} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
-        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
+        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} role={role} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} />}
           {page === 'managers' && <ManagersList />}
@@ -1045,10 +1045,11 @@ function ProviderDetail({ provider, onBack }) {
 }
 
 
-function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider, selectedReps = [], reps = [] }) {
+function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider, selectedReps = [], reps = [], role }) {
   const [page, setPage] = useState(0)
   const [startDate, setStartDate] = useState('')
   const [endDate, setEndDate] = useState('')
+  const [uploading, setUploading] = useState(false)
   const baseTests = selectedReps?.length > 0 ? (tests || []).filter(t => clinics.some(c => c.id === t.clinic_id && selectedReps.includes(c.rep_id))) : (tests || [])
   const filtered = [...baseTests].sort((a, b) => new Date(b.collected_date || b.collected || 0) - new Date(a.collected_date || a.collected || 0)).filter(t => {
     if (!startDate && !endDate) return true
@@ -1059,6 +1060,46 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider, se
   })
   const pageSize = 50
   const pageData = filtered.slice(page * pageSize, (page + 1) * pageSize)
+
+  async function handleUpload(e) {
+    const file = e.target.files[0]
+    if (!file) return
+    setUploading(true)
+    const text = await file.text()
+    const lines = text.split('\n').filter(l => l.trim())
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+    const accIdx = headers.findIndex(h => h.includes('accession') || h.includes('acc'))
+    const clinicIdx = headers.findIndex(h => h.includes('clinic'))
+    const providerIdx = headers.findIndex(h => h.includes('provider') || h.includes('doctor') || h.includes('npi'))
+    const typeIdx = headers.findIndex(h => h.includes('test') || h.includes('type') || h.includes('panel'))
+    const dateIdx = headers.findIndex(h => h.includes('collected') || h.includes('date'))
+    const existing = new Set((tests || []).map(t => t.accession).filter(Boolean))
+    let added = 0, dupes = 0
+    for (let i = 1; i < lines.length; i++) {
+      const cols = lines[i].split(',').map(c => c.trim())
+      const acc = accIdx >= 0 ? cols[accIdx] : null
+      if (acc && existing.has(acc)) { dupes++; continue }
+      const clinicName = clinicIdx >= 0 ? cols[clinicIdx] : null
+      const clinic = clinics.find(c => c.name?.toLowerCase() === clinicName?.toLowerCase())
+      const providerName = providerIdx >= 0 ? cols[providerIdx] : null
+      const provider = providers.find(p => p.name?.toLowerCase().includes(providerName?.toLowerCase() || '') || p.npi === providerName)
+      const testType = typeIdx >= 0 ? cols[typeIdx] : null
+      const collected = dateIdx >= 0 ? cols[dateIdx] : null
+      await supabase.from('tests').insert({
+        accession: acc,
+        clinic_id: clinic?.id,
+        provider_id: provider?.id,
+        test_type: testType,
+        collected_date: collected
+      })
+      if (acc) existing.add(acc)
+      added++
+    }
+    setUploading(false)
+    alert(`${added} tests added. ${dupes} duplicates skipped.`)
+    e.target.value = ''
+  }
+
   return (
     <div>
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
@@ -1069,6 +1110,12 @@ function Tests({ tests, clinics, providers, onSelectClinic, onSelectProvider, se
         <input type="date" value={endDate} onChange={e => { setEndDate(e.target.value); setPage(0) }} />
         <button className="btn btn-secondary btn-sm" onClick={() => { setStartDate(''); setEndDate(''); setPage(0) }}>Reset</button>
         <span style={{ color: '#6b7280' }}>{filtered.length} tests</span>
+        {role === 'global_admin' && (
+          <label className="btn" style={{ marginLeft: 'auto', cursor: 'pointer' }}>
+            {uploading ? 'Uploading...' : 'Upload Tests'}
+            <input type="file" accept=".csv" onChange={handleUpload} style={{ display: 'none' }} disabled={uploading} />
+          </label>
+        )}
       </div>
       <div className="card">
         <table>
