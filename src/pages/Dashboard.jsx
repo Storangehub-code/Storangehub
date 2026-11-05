@@ -1,5 +1,10 @@
 
-function formatName(name) {
+function testBelongsToClinic(t, clinic) {
+  if (!t || !clinic) return false
+  const tName = (t.clinic_name || '').toLowerCase().trim()
+  const cName = (clinic.name || '').toLowerCase().trim()
+  return tName && cName && tName === cName
+}
   if (!name) return '—'
   const parts = name.split(',').map(p => p.trim())
   if (parts.length === 3) return parts[0] + ', ' + parts[2] + ', ' + parts[1]
@@ -38,7 +43,7 @@ export default function Dashboard({ session }) {
       supabase.from('clinics').select('*').order('name'),
       supabase.from('providers').select('*, clinics(name)').order('name'),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-      supabase.from('tests').select('*, clinics(name), providers(name)').order('created_at', { ascending: false })
+      supabase.from('tests').select('*').order('collected_at', { ascending: false })
     ])
     setClinics(c.data || [])
     setProviders(p.data || [])
@@ -133,9 +138,9 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
   const totalTests = (filteredTests || []).length
-  const activeAccounts = filteredClinics.filter(c => (filteredTests || []).some(t => t.clinic_id === c.id)).length
-  const activeProviders = filteredProviders.filter(p => (filteredTests || []).some(t => t.provider_id === p.id)).length
-  const needAttention = filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).length
+  const activeAccounts = filteredClinics.filter(c => (filteredTests || []).some(t => testBelongsToClinic(t, c))).length
+  const activeProviders = filteredProviders.filter(p => (filteredTests || []).some(t => (t.provider_name || '').toLowerCase().includes((p.name || '').toLowerCase().split(',')[0]))).length
+  const needAttention = filteredClinics.filter(c => !(filteredTests || []).some(t => testBelongsToClinic(t, c))).length
   
   // Calculate tests by month
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
@@ -169,7 +174,10 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   
   // Top accounts by test count
   const accountCounts = {}
-  ;(filteredTests || []).forEach(t => { if (t.clinic_id) accountCounts[t.clinic_id] = (accountCounts[t.clinic_id] || 0) + 1 })
+  ;(filteredTests || []).forEach(t => {
+    const c = clinics.find(cl => testBelongsToClinic(t, cl))
+    if (c) accountCounts[c.id] = (accountCounts[c.id] || 0) + 1
+  })
   const topAccounts = Object.entries(accountCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([id, count]) => {
     const c = clinics.find(cl => cl.id === id)
     return { name: c?.name || 'Unknown', count }
@@ -229,7 +237,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
                   <td>{t.accession}</td>
                   <td>{formatDate(t.collected)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type}</td>
-                  <td>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
+                  <td>{t.clinic_name || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -632,15 +640,15 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {filtered.map(c => (
           <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: (() => {
-              const hasSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi'))
-              const recentSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi') && new Date(t.collected_date || t.finalized_date || 0) > new Date(Date.now() - 15 * 24 * 60 * 60 * 1000))
+              const hasSynovi = (tests || []).some(t => testBelongsToClinic(t, c) && (t.panel || '').toLowerCase().includes('synovi'))
+              const recentSynovi = (tests || []).some(t => testBelongsToClinic(t, c) && (t.panel || '').toLowerCase().includes('synovi') && new Date(t.collected_at || 0) > new Date(Date.now() - 15 * 24 * 60 * 60 * 1000))
               if (hasSynovi && !recentSynovi) return '2px solid #f97316'
               if (routeAccounts.includes(c.id)) return '2px solid #14b8a6'
               return '1px solid #1f2937'
             })() }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
               <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
-              <span className="badge" style={{ background: (tests || []).some(t => t.clinic_id === c.id) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => t.clinic_id === c.id) ? 'Active' : 'Inactive'}</span>
+              <span className="badge" style={{ background: (tests || []).some(t => testBelongsToClinic(t, c)) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => testBelongsToClinic(t, c)) ? 'Active' : 'Inactive'}</span>
             </div>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
