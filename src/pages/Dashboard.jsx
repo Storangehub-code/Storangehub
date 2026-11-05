@@ -331,6 +331,9 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
         <div style={{ fontSize: 13, color: '#9ca3af' }}>{rangeLabel} · Click a month on the chart to filter</div>
+        <div style={{ fontSize: 11, color: '#6b7280', marginTop: 4 }}>
+          Debug: {tests.slice(0, 3).map(t => `${t.accession || t.id}: raw=${String(t.collected || t.collected_at)} → month=${getMonthFromTest(t)}`).join(' | ')}
+        </div>
       </div>
 
       <div style={{ background: '#1f2937', padding: 16, borderRadius: 12, marginBottom: 20 }}>
