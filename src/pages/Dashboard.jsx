@@ -138,10 +138,10 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const [dateRange, setDateRange] = useState({ start: null, end: null })
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
-  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = t.collected_at || t.collected; return d && (!min || d < min) ? d : min }, null)
+  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = (t.collected_at || t.collected || '').split('T')[0]; return d && d > '2020-01-01' && (!min || d < min) ? d : min }, null)
   const latestDate = new Date().toISOString().split('T')[0]
-  const startDate = dateRange.start || earliestDate || '2020-01-01'
-  const endDate = dateRange.end || latestDate
+  const startDate = (dateRange.start || earliestDate || '2020-01-01').split('T')[0]
+  const endDate = (dateRange.end || latestDate).split('T')[0]
   const dateFilteredTests = (filteredTests || []).filter(t => {
     const d = t.collected_at || t.collected
     if (!d) return true
@@ -198,12 +198,12 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ marginBottom: 16, width: 'calc(40% - 8px)' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ca3af', marginBottom: 4 }}>
-          <span>Start: {formatDate(startDate)}</span>
-          <span>End: {formatDate(endDate)}</span>
+          <span>{formatDate(startDate)}</span>
+          <span>{formatDate(endDate)}</span>
         </div>
-        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={startDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ width: '100%', accentColor: '#14b8a6' }} />
+        <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
           <input type="date" value={startDate} min={earliestDate || '2020-01-01'} max={endDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
-          <span style={{ color: '#6b7280' }}>—</span>
           <input type="date" value={endDate} min={startDate} max={latestDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
         </div>
       </div>
