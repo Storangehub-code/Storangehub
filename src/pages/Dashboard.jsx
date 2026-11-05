@@ -201,7 +201,10 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <span>{formatDate(startDate)}</span>
           <span>{formatDate(endDate)}</span>
         </div>
-        <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={startDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ width: '100%', accentColor: '#14b8a6' }} />
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="range" min={earliestDate || '2020-01-01'} max={endDate} value={startDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1, accentColor: '#14b8a6' }} />
+          <input type="range" min={startDate} max={latestDate} value={endDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1, accentColor: '#3b82f6' }} />
+        </div>
         <div style={{ display: 'flex', gap: 8, marginTop: 4 }}>
           <input type="date" value={startDate} min={earliestDate || '2020-01-01'} max={endDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
           <input type="date" value={endDate} min={startDate} max={latestDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1, background: '#1f2937', color: '#fff', border: '1px solid #374151', borderRadius: 4, padding: '4px 8px' }} />
