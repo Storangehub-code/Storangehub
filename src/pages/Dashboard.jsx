@@ -391,14 +391,34 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
         </Card>
 
         <Card title="Tests by Panel">
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-            {Object.entries(panelCounts).sort((a, b) => b[1] - a[1]).slice(0, 5).map(([panel, count]) => (
-              <div key={panel} style={{ display: 'flex', justifyContent: 'space-between', fontSize: 14 }}>
-                <span>{panel}</span>
-                <strong>{count}</strong>
+          {(() => {
+            const entries = Object.entries(panelCounts).sort((a, b) => b[1] - a[1])
+            const total = entries.reduce((s, [, c]) => s + c, 0) || 1
+            const colors = ['#14b8a6', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']
+            let cumulative = 0
+            const stops = entries.slice(0, 4).map(([panel, count], i) => {
+              const pct = (count / total) * 100
+              const start = cumulative
+              cumulative += pct
+              return `${colors[i]} ${start}% ${cumulative}%`
+            })
+            const gradient = `conic-gradient(${stops.join(', ')})`
+            return (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+                <div style={{ width: 100, height: 100, borderRadius: '50%', background: gradient, position: 'relative' }}>
+                  <div style={{ position: 'absolute', inset: 18, borderRadius: '50%', background: '#1f2937', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 13, fontWeight: 600 }}>{total}</div>
+                </div>
+                <div style={{ flex: 1, display: 'flex', flexDirection: 'column', gap: 6 }}>
+                  {entries.slice(0, 4).map(([panel, count], i) => (
+                    <div key={panel} style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', fontSize: 13 }}>
+                      <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: colors[i], marginRight: 6 }} />{panel} {Math.round((count / total) * 100)}%</span>
+                      <strong>{count}</strong>
+                    </div>
+                  ))}
+                </div>
               </div>
-            ))}
-          </div>
+            )
+          })()}
         </Card>
 
         <Card title="Top Providers by Testing Volume">
