@@ -573,6 +573,18 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button>
         <button className="btn secondary" onClick={() => setRouteMode(true)}>Build Route</button>
+        {routeMode && routeAccounts.length > 0 && (
+          <button className="btn" onClick={() => {
+            const selected = clinics.filter(c => routeAccounts.includes(c.id))
+            const addresses = selected.map(c => encodeURIComponent([c.address, c.city, c.state].filter(Boolean).join(', '))).filter(a => a)
+            if (!addresses.length) return alert('Selected accounts have no addresses')
+            const origin = routeStart === 'other' && customStart ? encodeURIComponent(customStart) : ''
+            const url = origin ? `https://www.google.com/maps/dir/${origin}/${addresses.join('/')}` : `https://www.google.com/maps/dir/${addresses.join('/')}`
+            window.open(url, '_blank')
+            setRouteMode(false)
+            setRouteAccounts([])
+          }}>Make Route ({routeAccounts.length})</button>
+        )}
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search accounts..." style={{ flex: 1, maxWidth: 280 }} />
         <select className="form-input" style={{ width: 160 }} onChange={(e) => setAccountSort(e.target.value)} value={accountSort || 'az'}>
           <option value="az">A-Z</option>
@@ -602,7 +614,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
       )}
       {routeMode && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRouteMode(false)}>
-          <div style={{ background: '#1f2937', borderRadius: 12, padding: 24, width: 480, maxHeight: '80vh', overflow: 'auto' }} onClick={e => e.stopPropagation()}>
+          <div style={{ background: '#1f2937', borderRadius: 12, padding: 24, width: 360 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px' }}>Build Route</h3>
             <div style={{ marginBottom: 16 }}>
               <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>Starting location</div>
@@ -610,26 +622,8 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
               <label style={{ display: 'block', marginBottom: 6 }}><input type="radio" checked={routeStart === 'other'} onChange={() => setRouteStart('other')} /> Other address</label>
               {routeStart === 'other' && <input value={customStart} onChange={e => setCustomStart(e.target.value)} placeholder="Enter address" style={{ width: '100%', marginTop: 4 }} />}
             </div>
-            <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 8 }}>Select accounts ({routeAccounts.length} selected)</div>
-            <div style={{ maxHeight: 300, overflow: 'auto', marginBottom: 16 }}>
-              {filtered.map(c => (
-                <label key={c.id} style={{ display: 'flex', alignItems: 'center', gap: 8, padding: '6px 0', borderBottom: '1px solid #374151', cursor: 'pointer' }}>
-                  <input type="checkbox" checked={routeAccounts.includes(c.id)} onChange={() => setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id])} />
-                  <span>{c.name}</span>
-                </label>
-              ))}
-            </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => {
-                const selected = clinics.filter(c => routeAccounts.includes(c.id))
-                const addresses = selected.map(c => encodeURIComponent([c.address, c.city, c.state].filter(Boolean).join(', '))).filter(a => a)
-                if (!addresses.length) return alert('Selected accounts have no addresses')
-                const origin = routeStart === 'other' && customStart ? encodeURIComponent(customStart) : ''
-                const url = origin ? `https://www.google.com/maps/dir/${origin}/${addresses.join('/')}` : `https://www.google.com/maps/dir/${addresses.join('/')}`
-                window.open(url, '_blank')
-                setRouteMode(false)
-                setRouteAccounts([])
-              }}>Make Route</button>
+              <button className="btn" onClick={() => setRouteMode(false)}>Start Selecting</button>
               <button className="btn secondary" onClick={() => { setRouteMode(false); setRouteAccounts([]) }}>Cancel</button>
             </div>
           </div>
@@ -637,7 +631,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
       )}
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
         {filtered.map(c => (
-          <div key={c.id} className="card" onClick={() => onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: (() => {
+          <div key={c.id} className="card" onClick={() => routeMode ? setRouteAccounts(routeAccounts.includes(c.id) ? routeAccounts.filter(id => id !== c.id) : [...routeAccounts, c.id]) : onSelect(c)} style={{ cursor: 'pointer', padding: 16, border: (() => {
               const hasSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi'))
               const recentSynovi = (tests || []).some(t => t.clinic_id === c.id && (t.test_type || '').toLowerCase().includes('synovi') && new Date(t.collected_date || t.finalized_date || 0) > new Date(Date.now() - 15 * 24 * 60 * 60 * 1000))
               if (hasSynovi && !recentSynovi) return '2px solid #f97316'
@@ -645,7 +639,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
               return '1px solid #1f2937'
             })() }}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-              <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{c.name}</h3>
+              <h3 style={{ fontSize: 16, color: '#14b8a6', margin: 0 }}>{routeMode && (routeAccounts.includes(c.id) ? '✓ ' : '○ ')}{c.name}</h3>
               <span className="badge" style={{ background: (tests || []).some(t => t.clinic_id === c.id) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => t.clinic_id === c.id) ? 'Active' : 'Inactive'}</span>
             </div>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
