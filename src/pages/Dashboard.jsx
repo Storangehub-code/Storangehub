@@ -487,7 +487,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
 
   async function submitOrder() {
     if (!ordering) return
-    const orderDetails = {
+    const orderData = {
       reqs: supplies.reqs,
       wound: supplies.wound,
       uti: supplies.uti,
@@ -498,7 +498,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
       bags: supplies.bags,
       results: supplies.results
     }
-    await supabase.from('clinics').update({ stage: 'Pending', order_details: orderDetails }).eq('id', ordering.id)
+    await supabase.from('clinics').update({ stage: 'Pending', order_details: orderData }).eq('id', ordering.id)
     
     const orderDetails = `
 Clinic: ${ordering.name}
