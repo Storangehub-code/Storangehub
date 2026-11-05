@@ -237,9 +237,9 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
               {(tests || []).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
-                  <td>{formatDate(t.collected)}</td>
-                  <td style={{ color: '#14b8a6' }}>{t.test_type}</td>
-                  <td>{t.clinic_name || '—'}</td>
+                  <td>{formatDate(t.collected_at)}</td>
+                  <td style={{ color: '#14b8a6' }}>{t.panel || t.test_type || '—'}</td>
+                  <td>{t.clinic_name || clinics.find(c => testBelongsToClinic(t, c))?.name || '—'}</td>
                 </tr>
               ))}
             </tbody>
@@ -553,6 +553,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
   const [search, setSearch] = useState('')
   const [accountSort, setAccountSort] = useState('az')
   const [routeMode, setRouteMode] = useState(false)
+  const [showRoutePopup, setShowRoutePopup] = useState(false)
   const [routeAccounts, setRouteAccounts] = useState([])
   const [routeStart, setRouteStart] = useState('home')
   const [customStart, setCustomStart] = useState('')
@@ -582,7 +583,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
         <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button>
-        <button className="btn secondary" onClick={() => setRouteMode(true)}>Build Route</button>
+        <button className="btn secondary" onClick={() => { setShowRoutePopup(true); setRouteMode(true) }}>Build Route</button>
         {routeMode && routeAccounts.length > 0 && (
           <button className="btn" onClick={() => {
             const selected = clinics.filter(c => routeAccounts.includes(c.id))
@@ -622,8 +623,8 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
           <button className="btn secondary" onClick={() => setShowAdd(false)} style={{ marginLeft: 8 }}>Cancel</button>
         </div>
       )}
-      {routeMode && (
-        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setRouteMode(false)}>
+      {showRoutePopup && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.6)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000 }} onClick={() => setShowRoutePopup(false)}>
           <div style={{ background: '#1f2937', borderRadius: 12, padding: 24, width: 360 }} onClick={e => e.stopPropagation()}>
             <h3 style={{ margin: '0 0 16px' }}>Build Route</h3>
             <div style={{ marginBottom: 16 }}>
@@ -633,8 +634,8 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
               {routeStart === 'other' && <input value={customStart} onChange={e => setCustomStart(e.target.value)} placeholder="Enter address" style={{ width: '100%', marginTop: 4 }} />}
             </div>
             <div style={{ display: 'flex', gap: 8 }}>
-              <button className="btn" onClick={() => setRouteMode(false)}>Start Selecting</button>
-              <button className="btn secondary" onClick={() => { setRouteMode(false); setRouteAccounts([]) }}>Cancel</button>
+              <button className="btn" onClick={() => setShowRoutePopup(false)}>Start Selecting</button>
+              <button className="btn secondary" onClick={() => { setShowRoutePopup(false); setRouteMode(false); setRouteAccounts([]) }}>Cancel</button>
             </div>
           </div>
         </div>
