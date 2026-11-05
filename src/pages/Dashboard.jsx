@@ -109,7 +109,7 @@ export default function Dashboard({ session }) {
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} role={role} />}
-        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
+        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} setPage={setPage} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} role={role} />
         )}
@@ -306,7 +306,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
           {(() => {
-            const managerTests = filteredTests.filter(t => {
+            const managerTests = tests.filter(t => {
               const clinic = clinics.find(c => c.id === t.clinic_id)
               const rep = reps.find(r => r.id === clinic?.rep_id)
               return rep?.manager_id
@@ -330,7 +330,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
           {(() => {
             const byRep = {}
-            filteredTests.forEach(t => {
+            tests.forEach(t => {
               const clinic = clinics.find(c => c.id === t.clinic_id)
               const rep = reps.find(r => r.id === clinic?.rep_id)
               if (rep) byRep[rep.full_name] = (byRep[rep.full_name] || 0) + 1
@@ -604,7 +604,7 @@ function formatPhone(p) {
   return n || '—'
 }
 
-function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps = [] }) {
+function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps = [], role, setPage }) {
   const [showAdd, setShowAdd] = useState(false)
   const [search, setSearch] = useState('')
   const [accountSort, setAccountSort] = useState('az')
@@ -638,7 +638,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
     <div>
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
       <div style={{ display: 'flex', gap: 12, marginBottom: 16 }}>
-        <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button>
+        {role === 'global_admin' ? <button className="btn" onClick={() => setShowAdd(!showAdd)}>+ Add Account</button> : <button className="btn" onClick={() => setPage('prospects')}>+ Add Prospect</button>}
         <button className="btn secondary" onClick={() => { setShowRoutePopup(true); setRouteMode(true) }}>Build Route</button>
         {routeMode && routeAccounts.length > 0 && (
           <button className="btn" onClick={() => {
@@ -1620,6 +1620,19 @@ function RepsList({ selected, setSelected, clinics = [], tests = [], role }) {
       ({ error } = await supabase.from('profiles').insert(payload))
     }
     if (error) return alert(error.message)
+    if (!editing) {
+      try {
+        await fetch('/.netlify/functions/sendemail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: form.email,
+            subject: 'Welcome to Storangehub',
+            text: `You've been given access to Storangehub.com.\n\nLogin: ${form.email}\nPassword: Welcome1\n\nPlease log in and change your password.`
+          })
+        })
+      } catch (e) { console.log('Email error', e) }
+    }
     setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' })
     setEditing(null)
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
@@ -1693,7 +1706,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [], role }) {
 function ManagersList() {
   const [managers, setManagers] = useState([])
   const [reps, setReps] = useState([])
-  const [form, setForm] = useState({ first: '', last: '', phone: '', email: '' })
+  const [form, setForm] = useState({ first: '', last: '', phone: '', email: '', address: '' })
   const [editing, setEditing] = useState(null)
   const [assigning, setAssigning] = useState(null)
   useEffect(() => {
@@ -1703,7 +1716,7 @@ function ManagersList() {
   async function createManager() {
     if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
     const full_name = form.first.trim() + ' ' + form.last.trim()
-    const payload = { full_name, phone: form.phone, email: form.email, role: 'manager' }
+    const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, role: 'manager' }
     let error
     if (editing) {
       ({ error } = await supabase.from('profiles').update(payload).eq('id', editing))
@@ -1711,7 +1724,20 @@ function ManagersList() {
       ({ error } = await supabase.from('profiles').insert(payload))
     }
     if (error) return alert(error.message)
-    setForm({ first: '', last: '', phone: '', email: '' })
+    if (!editing) {
+      try {
+        await fetch('/.netlify/functions/sendemail', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            to: form.email,
+            subject: 'Welcome to Storangehub',
+            text: `You've been given access to Storangehub.com.\n\nLogin: ${form.email}\nPassword: Welcome1\n\nPlease log in and change your password.`
+          })
+        })
+      } catch (e) { console.log('Email error', e) }
+    }
+    setForm({ first: '', last: '', phone: '', email: '', address: '' })
     setEditing(null)
     supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
   }
@@ -1761,6 +1787,7 @@ function ManagersList() {
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Phone</label><input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} /></div>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>Email</label><input value={form.email} onChange={e => setForm({...form, email: e.target.value})} /></div>
         </div>
+        <div style={{ marginBottom: 10 }}><label style={{ fontSize: 13, color: '#9ca3af' }}>Home Address</label><input value={form.address} onChange={e => setForm({...form, address: e.target.value})} style={{ width: '100%' }} /></div>
         <div style={{ textAlign: 'right' }}>
           <button className="btn" onClick={createManager}>{editing ? "Update Manager" : "Add Manager"}</button>
           {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '' }) }}>Cancel</button>}
