@@ -425,7 +425,8 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [] 
 
   async function addProspect() {
     if (!form.name.trim()) return
-    const { data: clinic } = await supabase.from('clinics').insert({ ...form, is_prospect: true }).select().single()
+    const { data: clinic, error } = await supabase.from('clinics').insert({ ...form, is_prospect: true }).select().single()
+    if (error) return alert('Error: ' + error.message)
     if (clinic) {
       for (const p of providers) {
         if (p.name.trim()) {
