@@ -267,7 +267,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       if (key) map[key] = (map[key] || 0) + 1
     })
 
-    // Always show the last 6 months from today
+    // Always show the last 6 months ending with the current month
     const result = []
     const now = new Date()
     for (let i = 5; i >= 0; i--) {
@@ -383,7 +383,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
             {monthlyVolume.map(({ month, count }) => (
               <div key={month} onClick={() => setSelectedMonth(selectedMonth === month ? null : month)} style={{ width: 48, textAlign: 'center', cursor: 'pointer' }}>
                 <div style={{ height: Math.max(8, (count / maxVolume) * 150), background: selectedMonth === month ? '#14b8a6' : '#0d9488', borderRadius: 4, margin: '0 auto 6px', transition: 'all 0.15s' }} />
-                <div style={{ fontSize: 11, color: '#9ca3af' }}>{new Date(month + '-01').toLocaleDateString('en-US', { month: 'short', year: '2-digit' })}</div>
+                <div style={{ fontSize: 11, color: '#9ca3af' }}>{month.slice(5)}/{month.slice(2, 4)}</div>
               </div>
             ))}
           </div>
