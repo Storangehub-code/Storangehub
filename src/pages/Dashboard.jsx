@@ -138,6 +138,10 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const [dateRange, setDateRange] = useState({ start: null, end: null })
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
+  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = t.collected_at || t.collected; return d && (!min || d < min) ? d : min }, null)
+  const latestDate = new Date().toISOString().split('T')[0]
+  const startDate = dateRange.start || earliestDate || '2020-01-01'
+  const endDate = dateRange.end || latestDate
   const dateFilteredTests = (filteredTests || []).filter(t => {
     const d = t.collected_at || t.collected
     if (!d) return true
@@ -147,13 +151,8 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const activeAccounts = filteredClinics.filter(c => dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
   const activeProviders = filteredProviders.filter(p => dateFilteredTests.some(t => (t.provider_name || '').toLowerCase().includes((p.name || '').toLowerCase().split(',')[0]))).length
   const needAttention = filteredClinics.filter(c => !dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
-  
-  // Calculate tests by month
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
-  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = t.collected_at || t.collected; return d && (!min || d < min) ? d : min }, null)
-  const latestDate = new Date().toISOString().split('T')[0]
-  const startDate = dateRange.start || earliestDate || '2020-01-01'
-  const endDate = dateRange.end || latestDate
+  const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10' }
   const monthlyCounts = {}
   months.forEach(m => { monthlyCounts[m] = 0 })
   ;(filteredTests || []).forEach(t => {
