@@ -1,13 +1,20 @@
 export default async (event) => {
   console.log('Function called')
   console.log('Method:', event.httpMethod)
-  console.log('Body:', event.body)
   
   if (event.httpMethod !== 'POST') {
-    return { statusCode: 405, body: 'Method not allowed' }
+    return new Response('Method not allowed', { status: 405 })
   }
 
-  const { to, subject, text } = JSON.parse(event.body || '{}')
+  let body = {}
+  try {
+    const text = await event.text()
+    body = JSON.parse(text || '{}')
+  } catch (e) {
+    console.log('Parse error:', e.message)
+  }
+
+  const { to, subject, text } = body
   const key = process.env.RESEND_KEY
   console.log('Key exists:', !!key)
   console.log('To:', to)
@@ -28,9 +35,9 @@ export default async (event) => {
     })
     const data = await res.json()
     console.log('Resend response:', JSON.stringify(data))
-    return { statusCode: 200, body: JSON.stringify(data) }
+    return new Response(JSON.stringify(data), { status: 200, headers: { 'Content-Type': 'application/json' } })
   } catch (e) {
     console.log('Error:', e.message)
-    return { statusCode: 500, body: JSON.stringify({ error: e.message }) }
+    return new Response(JSON.stringify({ error: e.message }), { status: 500, headers: { 'Content-Type': 'application/json' } })
   }
 }
