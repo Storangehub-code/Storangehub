@@ -5,6 +5,8 @@ function testBelongsToClinic(t, clinic) {
   const cName = (clinic.name || '').toLowerCase().trim()
   return tName && cName && tName === cName
 }
+
+function formatName(name) {
   if (!name) return '—'
   const parts = name.split(',').map(p => p.trim())
   if (parts.length === 3) return parts[0] + ', ' + parts[2] + ', ' + parts[1]
