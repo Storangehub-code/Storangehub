@@ -500,6 +500,19 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
     }
     await supabase.from('clinics').update({ stage: 'Pending', order_details: orderData }).eq('id', ordering.id)
     
+    // Notify global admins
+    const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
+    if (admins) {
+      for (const admin of admins) {
+        await supabase.from('notifications').insert({
+          user_id: admin.id,
+          message: `New order request: ${ordering.name}`,
+          type: 'order_request',
+          clinic_id: ordering.id
+        })
+      }
+    }
+    
     const orderDetails = `
 Clinic: ${ordering.name}
 Type: ${ordering.type || 'N/A'}
