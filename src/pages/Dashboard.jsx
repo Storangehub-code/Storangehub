@@ -107,7 +107,7 @@ export default function Dashboard({ session }) {
         
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
-        {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
+        {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} userId={userId} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} role={role} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} setPage={setPage} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
@@ -414,7 +414,7 @@ function ApproveAccounts({ clinics, onRefresh }) {
   )
 }
 
-function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [] }) {
+function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [], userId }) {
   const [showAdd, setShowAdd] = useState(false)
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
@@ -425,7 +425,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [] 
 
   async function addProspect() {
     if (!form.name.trim()) return
-    const { data: clinic, error } = await supabase.from('clinics').insert({ ...form, is_prospect: true }).select().single()
+    const { data: clinic, error } = await supabase.from('clinics').insert({ ...form, is_prospect: true, rep_id: userId }).select().single()
     if (error) return alert('Error: ' + error.message)
     if (clinic) {
       for (const p of providers) {
