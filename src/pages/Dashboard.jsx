@@ -138,7 +138,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const [dateRange, setDateRange] = useState({ start: null, end: null })
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
-  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = (t.collected_at || t.collected || '').split('T')[0]; return d && d > '2020-01-01' && (!min || d < min) ? d : min }, null)
+  const earliestDate = '2026-02-01'
   const latestDate = new Date().toISOString().split('T')[0]
   const startDate = (dateRange.start || '2026-02-01').split('T')[0]
   const endDate = (dateRange.end || latestDate).split('T')[0]
