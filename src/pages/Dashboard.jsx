@@ -363,6 +363,14 @@ function ApproveAccounts({ clinics, onRefresh }) {
       supply_url: form.supplyUrl,
       pickup_url: form.pickupUrl
     }).eq('id', selected.id)
+    if (selected.rep_id) {
+      await supabase.from('notifications').insert({
+        user_id: selected.rep_id,
+        message: `Account approved: ${selected.name}`,
+        type: 'account_approved',
+        clinic_id: selected.id
+      })
+    }
     setSelected(null)
     setForm({ supplyUrl: '', pickupUrl: '' })
     onRefresh()
@@ -586,7 +594,13 @@ Supplies Requested:
                     <option>Cold</option><option>Warm</option><option>HOT</option>
                   </select>
                 </td>
-                <td onClick={e => e.stopPropagation()}><button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setOrdering(p)}>Ready to Order</button></td>
+                <td onClick={e => e.stopPropagation()}>
+                  {p.stage === 'Pending' ? (
+                    <span style={{ color: '#f59e0b', fontSize: 12 }}>Pending Approval</span>
+                  ) : (
+                    <button className="btn" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => setOrdering(p)}>Ready to Order</button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
