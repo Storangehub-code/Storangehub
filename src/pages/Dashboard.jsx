@@ -1,9 +1,7 @@
 
 function testBelongsToClinic(t, clinic) {
   if (!t || !clinic) return false
-  const tName = (t.clinic_name || '').toLowerCase().trim()
-  const cName = (clinic.name || '').toLowerCase().trim()
-  return tName && cName && tName === cName
+  return t.clinic_id === clinic.id
 }
 
 function formatName(name) {
