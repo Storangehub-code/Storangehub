@@ -1,14 +1,15 @@
-export default async (event) => {
+export default async (req) => {
   console.log('Function called')
-  console.log('Method:', event.httpMethod)
+  console.log('Method:', req.method)
   
-  if (event.httpMethod !== 'POST') {
+  if (req.method !== 'POST') {
     return new Response('Method not allowed', { status: 405 })
   }
 
   let body = {}
   try {
-    const text = await event.text()
+    const text = await req.text()
+    console.log('Body:', text)
     body = JSON.parse(text || '{}')
   } catch (e) {
     console.log('Parse error:', e.message)
