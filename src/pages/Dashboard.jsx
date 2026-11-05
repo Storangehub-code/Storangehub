@@ -135,17 +135,25 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const filteredProviders = selectedReps?.length > 0 ? providers.filter(p => filteredClinics.some(c => c.id === p.clinic_id)) : providers
   const filteredTests = selectedReps?.length > 0 ? tests.filter(t => filteredClinics.some(c => c.id === t.clinic_id)) : tests
   const filtered = selectedReps?.length > 0
-  const [selectedMonth, setSelectedMonth] = useState(null)
+  const [dateRange, setDateRange] = useState({ start: null, end: null })
   const [testPage, setTestPage] = useState(0)
   const [attentionPage, setAttentionPage] = useState(0)
-  const totalTests = (filteredTests || []).length
-  const activeAccounts = filteredClinics.filter(c => (filteredTests || []).some(t => testBelongsToClinic(t, c))).length
-  const activeProviders = filteredProviders.filter(p => (filteredTests || []).some(t => (t.provider_name || '').toLowerCase().includes((p.name || '').toLowerCase().split(',')[0]))).length
-  const needAttention = filteredClinics.filter(c => !(filteredTests || []).some(t => testBelongsToClinic(t, c))).length
+  const dateFilteredTests = (filteredTests || []).filter(t => {
+    const d = t.collected_at || t.collected
+    if (!d) return true
+    return d >= startDate && d <= endDate
+  })
+  const totalTests = dateFilteredTests.length
+  const activeAccounts = filteredClinics.filter(c => dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
+  const activeProviders = filteredProviders.filter(p => dateFilteredTests.some(t => (t.provider_name || '').toLowerCase().includes((p.name || '').toLowerCase().split(',')[0]))).length
+  const needAttention = filteredClinics.filter(c => !dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
   
   // Calculate tests by month
   const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
-  const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10' }
+  const earliestDate = (filteredTests || []).reduce((min, t) => { const d = t.collected_at || t.collected; return d && (!min || d < min) ? d : min }, null)
+  const latestDate = new Date().toISOString().split('T')[0]
+  const startDate = dateRange.start || earliestDate || '2020-01-01'
+  const endDate = dateRange.end || latestDate
   const monthlyCounts = {}
   months.forEach(m => { monthlyCounts[m] = 0 })
   ;(filteredTests || []).forEach(t => {
@@ -157,11 +165,12 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   })
   const maxCount = Math.max(...Object.values(monthlyCounts), 1)
   
-  // Count tests by type (filtered by selected month)
+  // Count tests by type (filtered by date range)
   const testCounts = {}
-  ;(tests || []).filter(t => {
-    if (!selectedMonth) return true
-    return t.collected?.substring(5, 7) === monthMap[selectedMonth]
+  ;(filteredTests || []).filter(t => {
+    const d = t.collected_at || t.collected
+    if (!d) return true
+    return d >= startDate && d <= endDate
   }).forEach(t => { testCounts[t.test_type] = (testCounts[t.test_type] || 0) + 1 })
   const topTests = Object.entries(testCounts).sort((a, b) => b[1] - a[1]).slice(0, 4)
   
@@ -188,11 +197,15 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
     <div>
       <p style={{ color: '#64748b', marginBottom: 20, fontSize: 14 }}>Data through {new Date().toLocaleDateString()}</p>
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
-        <button className="btn secondary btn-sm" onClick={() => setSelectedMonth(null)} style={{ background: !selectedMonth ? '#14b8a6' : undefined }}>All</button>
-        {months.map(m => (
-          <button key={m} className="btn secondary btn-sm" onClick={() => setSelectedMonth(selectedMonth === m ? null : m)} style={{ background: selectedMonth === m ? '#14b8a6' : undefined }}>{m}</button>
-        ))}
+      <div style={{ marginBottom: 16 }}>
+        <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 13, color: '#9ca3af', marginBottom: 4 }}>
+          <span>{formatDate(startDate)}</span>
+          <span>{formatDate(endDate)}</span>
+        </div>
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+          <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={startDate} onChange={e => setDateRange({ ...dateRange, start: e.target.value })} style={{ flex: 1 }} />
+          <input type="range" min={earliestDate || '2020-01-01'} max={latestDate} value={endDate} onChange={e => setDateRange({ ...dateRange, end: e.target.value })} style={{ flex: 1 }} />
+        </div>
       </div>
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
@@ -206,9 +219,9 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <h3 style={{ marginBottom: 12 }}>Monthly Testing Volume</h3>
           <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
             {months.map(m => (
-              <div key={m} onClick={() => setSelectedMonth(selectedMonth === m ? null : m)} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }}>
+              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
                 <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{monthlyCounts[m]}</div>
-                <div style={{ height: `${Math.max(20, (monthlyCounts[m] / maxCount) * 120)}px`, background: selectedMonth === m ? '#14b8a6' : 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0', opacity: selectedMonth && selectedMonth !== m ? 0.4 : 1 }}></div>
+                <div style={{ height: `${Math.max(20, (monthlyCounts[m] / maxCount) * 120)}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
               </div>
             ))}
