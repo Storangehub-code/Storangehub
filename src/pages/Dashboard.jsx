@@ -108,7 +108,7 @@ export default function Dashboard({ session }) {
         {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
-        {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
+        {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} role={role} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
           <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} role={role} />
@@ -776,24 +776,26 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
             <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
             <input value={editForm.emr || ''} onChange={e => setEditForm({...editForm, emr: e.target.value})} placeholder="EMR" />
-            {(role === 'global_admin' || role === 'manager') && <input value={editForm.ordering_url || ''} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} placeholder="Custom Ordering URL" style={{ gridColumn: 'span 2' }} />}
-            {(role === 'global_admin' || role === 'manager') && <input value={editForm.supplies_url || ''} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} placeholder="Custom Supplies URL" style={{ gridColumn: 'span 2' }} />}
-            {(role === 'global_admin' || role === 'manager') && <div style={{ gridColumn: 'span 2' }}>
-              <label style={{ fontSize: 13, color: '#9ca3af' }}>Upload Requisition</label>
-              <input type="file" onChange={async (e) => {
-                const file = e.target.files[0]
-                if (!file) return
-                const path = 'requisitions/' + clinic.id + '/' + Date.now() + '-' + file.name
-                const { error } = await supabase.storage.from('docs').upload(path, file)
-                if (error) return alert(error.message)
-                setEditForm({...editForm, requisition_url: path })
-                alert('Requisition uploaded!')
-              }} />
-              {editForm.requisition_url && <button className="btn secondary btn-sm" style={{ marginLeft: 8 }} onClick={async () => {
-                const { data } = await supabase.storage.from('docs').createSignedUrl(editForm.requisition_url, 60)
-                if (data?.signedUrl) window.open(data.signedUrl, '_blank')
-              }}>View current</button>}
-            </div>
+            {(role === 'global_admin' || role === 'manager') && <>
+              <input value={editForm.ordering_url || ''} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} placeholder="Custom Ordering URL" style={{ gridColumn: 'span 2' }} />
+              <input value={editForm.supplies_url || ''} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} placeholder="Custom Supplies URL" style={{ gridColumn: 'span 2' }} />
+              <div style={{ gridColumn: 'span 2' }}>
+                <label style={{ fontSize: 13, color: '#9ca3af' }}>Upload Requisition</label>
+                <input type="file" onChange={async (e) => {
+                  const file = e.target.files[0]
+                  if (!file) return
+                  const path = 'requisitions/' + clinic.id + '/' + Date.now() + '-' + file.name
+                  const { error } = await supabase.storage.from('docs').upload(path, file)
+                  if (error) return alert(error.message)
+                  setEditForm({...editForm, requisition_url: path })
+                  alert('Requisition uploaded!')
+                }} />
+                {editForm.requisition_url && <button className="btn secondary btn-sm" style={{ marginLeft: 8 }} onClick={async () => {
+                  const { data } = await supabase.storage.from('docs').createSignedUrl(editForm.requisition_url, 60)
+                  if (data?.signedUrl) window.open(data.signedUrl, '_blank')
+                }}>View current</button>}
+              </div>
+            </>}
           </div>
           <button className="btn" onClick={async () => {
             await supabase.from('clinics').update(editForm).eq('id', clinic.id)
