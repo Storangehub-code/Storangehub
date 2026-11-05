@@ -419,7 +419,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const [ordering, setOrdering] = useState(null)
-  const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0 })
+  const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [] })
   const allProspects = clinics.filter(c => c.is_prospect)
   const prospects = selectedReps?.length > 0 ? allProspects.filter(c => selectedReps.includes(c.rep_id)) : allProspects
 
@@ -471,6 +471,7 @@ Supplies Requested:
 - SynoviFact: ${supplies.synovi}
 - Shipping: ${supplies.labels} x${supplies.labelQty}
 - Bags: ${supplies.bags}
+- Results: ${supplies.results.join(', ') || 'None'}
     `
     
     try {
@@ -516,6 +517,17 @@ Supplies Requested:
         <div style={{ marginBottom: 16 }}>
           <label>Return Shipping Bags</label>
           <input type="number" min="0" max="25" value={supplies.bags} onChange={e => setSupplies({...supplies, bags: e.target.value})} style={{ marginLeft: 8, width: 80 }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8 }}>Results Sent</label>
+          {['Fax', 'Portal', 'Encrypted Email'].map(opt => (
+            <label key={opt} style={{ marginRight: 16 }}>
+              <input type="checkbox" checked={supplies.results.includes(opt)} onChange={e => {
+                const results = e.target.checked ? [...supplies.results, opt] : supplies.results.filter(r => r !== opt)
+                setSupplies({...supplies, results})
+              }} /> {opt}
+            </label>
+          ))}
         </div>
         <button className="btn" onClick={submitOrder}>Submit Order</button>
         <button className="btn secondary" onClick={() => setOrdering(null)} style={{ marginLeft: 8 }}>Cancel</button>
