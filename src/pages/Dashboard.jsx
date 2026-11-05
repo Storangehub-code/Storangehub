@@ -188,6 +188,12 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
     <div>
       <p style={{ color: '#64748b', marginBottom: 20, fontSize: 14 }}>Data through {new Date().toLocaleDateString()}</p>
       {selectedReps?.length > 0 && <div className="card" style={{ marginBottom: 16, background: '#0d9488' }}><p style={{ margin: 0 }}>Filtered to: {selectedReps.map(id => reps.find(r => r.id === id)?.full_name || 'Rep').join(', ')}</p></div>}
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+        <button className="btn secondary btn-sm" onClick={() => setSelectedMonth(null)} style={{ background: !selectedMonth ? '#14b8a6' : undefined }}>All</button>
+        {months.map(m => (
+          <button key={m} className="btn secondary btn-sm" onClick={() => setSelectedMonth(selectedMonth === m ? null : m)} style={{ background: selectedMonth === m ? '#14b8a6' : undefined }}>{m}</button>
+        ))}
+      </div>
       <div className="kpi-grid">
         <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
         <div className="kpi"><div className="kpi-value">{activeAccounts}</div><div className="kpi-label">Active Accounts</div><div className="kpi-change up">{clinics.length} total</div></div>
@@ -210,11 +216,17 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Tests by Panel</h3>
-          {topTests.map(([type, count]) => (
-            <div key={type} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
-              <span>{type}</span><span style={{ fontWeight: 600 }}>{count}</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 16 }}>
+            <div style={{ width: 100, height: 100, borderRadius: '50%', background: `conic-gradient(${topTests.map(([t, c], i) => { const total = topTests.reduce((s, [,v]) => s + v, 0); const start = topTests.slice(0, i).reduce((s, [,v]) => s + v, 0) / total * 360; const end = (topTests.slice(0, i).reduce((s, [,v]) => s + v, 0) + c) / total * 360; const colors = ['#14b8a6', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6']; return `${colors[i % colors.length]} ${start}deg ${end}deg`; }).join(', ')})` }}></div>
+            <div style={{ flex: 1 }}>
+              {topTests.map(([type, count], i) => (
+                <div key={type} style={{ display: 'flex', justifyContent: 'space-between', padding: '4px 0', fontSize: 13 }}>
+                  <span><span style={{ display: 'inline-block', width: 10, height: 10, borderRadius: '50%', background: ['#14b8a6', '#3b82f6', '#f59e0b', '#ef4444', '#8b5cf6'][i % 5], marginRight: 6 }}></span>{type}</span>
+                  <span style={{ fontWeight: 600 }}>{count}</span>
+                </div>
+              ))}
             </div>
-          ))}
+          </div>
           {!topTests.length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
         </div>
         <div className="card">
