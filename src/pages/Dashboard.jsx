@@ -378,9 +378,33 @@ function ApproveAccounts({ clinics, onRefresh }) {
   }
 
   if (selected) {
+    const order = selected.order_details || {}
     return (
       <div className="card">
         <h3 style={{ marginBottom: 16 }}>Approve: {selected.name}</h3>
+        <div style={{ background: '#1f2937', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <h4 style={{ marginBottom: 12 }}>Clinic Info</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 14 }}>
+            <div><span style={{ color: '#9ca3af' }}>Type:</span> {selected.type || '—'}</div>
+            <div><span style={{ color: '#9ca3af' }}>City:</span> {selected.city || '—'}</div>
+            <div><span style={{ color: '#9ca3af' }}>Phone:</span> {selected.phone || '—'}</div>
+            <div><span style={{ color: '#9ca3af' }}>Email:</span> {selected.email || '—'}</div>
+            <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#9ca3af' }}>Address:</span> {selected.address || '—'}</div>
+          </div>
+        </div>
+        <div style={{ background: '#1f2937', padding: 16, borderRadius: 8, marginBottom: 16 }}>
+          <h4 style={{ marginBottom: 12 }}>Supplies Requested</h4>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, fontSize: 14 }}>
+            <div><span style={{ color: '#9ca3af' }}>Requisitions:</span> {order.reqs || '—'}</div>
+            <div><span style={{ color: '#9ca3af' }}>Wound kits:</span> {order.wound || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>UTI kits:</span> {order.uti || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>RPP kits:</span> {order.rpp || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>SynoviFact:</span> {order.synovi || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>Shipping:</span> {order.labels || '—'} x{order.labelQty || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>Bags:</span> {order.bags || 0}</div>
+            <div><span style={{ color: '#9ca3af' }}>Results:</span> {(order.results || []).join(', ') || '—'}</div>
+          </div>
+        </div>
         <div style={{ marginBottom: 12 }}>
           <label>Custom Supply URL</label>
           <input value={form.supplyUrl} onChange={e => setForm({...form, supplyUrl: e.target.value})} placeholder="https://..." style={{ width: '100%', marginTop: 4 }} />
@@ -463,7 +487,18 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
 
   async function submitOrder() {
     if (!ordering) return
-    await supabase.from('clinics').update({ stage: 'Pending' }).eq('id', ordering.id)
+    const orderDetails = {
+      reqs: supplies.reqs,
+      wound: supplies.wound,
+      uti: supplies.uti,
+      rpp: supplies.rpp,
+      synovi: supplies.synovi,
+      labels: supplies.labels,
+      labelQty: supplies.labelQty,
+      bags: supplies.bags,
+      results: supplies.results
+    }
+    await supabase.from('clinics').update({ stage: 'Pending', order_details: orderDetails }).eq('id', ordering.id)
     
     const orderDetails = `
 Clinic: ${ordering.name}
