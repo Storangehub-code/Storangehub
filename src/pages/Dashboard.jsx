@@ -51,6 +51,7 @@ export default function Dashboard({ session }) {
     setProviders(p.data || [])
     setExpenses(e.data || [])
     setTests(testData.data || [])
+    if (testData.data?.[0]) console.log('Sample test:', testData.data[0])
     const { data: repsData } = await supabase.from('profiles').select('*').eq('role', 'rep')
     setReps(repsData || [])
   }
@@ -237,9 +238,9 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
               {(tests || []).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
-                  <td>{formatDate(t.collected_at)}</td>
+                  <td>{formatDate(t.collected_at || t.collected || t.collected_date)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.panel || t.test_type || '—'}</td>
-                  <td>{t.clinic_name || clinics.find(c => testBelongsToClinic(t, c))?.name || '—'}</td>
+                  <td>{t.clinic_name || t.clinic || clinics.find(c => testBelongsToClinic(t, c))?.name || '—'}</td>
                 </tr>
               ))}
             </tbody>
