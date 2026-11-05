@@ -207,6 +207,16 @@ function getCollected(t) {
   return isNaN(d.getTime()) ? null : d
 }
 
+function getMonthFromTest(t) {
+  const raw = t.collected || t.collected_at
+  if (!raw) return null
+  const s = String(raw)
+  const match = s.match(/^(\d{4}-\d{2})/)
+  if (match) return match[1]
+  const d = getCollected(t)
+  return d ? getMonthKey(d) : null
+}
+
 function getMonthKey(date) {
   if (!date) return null
   return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`
@@ -236,10 +246,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       })
     }
     if (selectedMonth) {
-      result = result.filter(t => {
-        const d = getCollected(t)
-        return d && getMonthKey(d) === selectedMonth
-      })
+      result = result.filter(t => getMonthFromTest(t) === selectedMonth)
     }
     return result
   }, [tests, dateRange, selectedMonth])
@@ -247,9 +254,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
   const monthlyVolume = useMemo(() => {
     const map = {}
     tests.forEach(t => {
-      const d = getCollected(t)
-      if (!d || isNaN(d.getTime())) return
-      const key = getMonthKey(d)
+      const key = getMonthFromTest(t)
       if (key) map[key] = (map[key] || 0) + 1
     })
 
@@ -258,7 +263,7 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
     const now = new Date()
     for (let i = 5; i >= 0; i--) {
       const d = new Date(now.getFullYear(), now.getMonth() - i, 1)
-      const key = getMonthKey(d)
+      const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`
       result.push({ month: key, count: map[key] || 0 })
     }
     return result
