@@ -43,7 +43,7 @@ export default function Dashboard({ session }) {
       const [acc, prov, tst, clin] = await Promise.all([
         supabase.from('accounts').select('*').order('name'),
         supabase.from('providers').select('*').order('last_name'),
-        supabase.from('tests').select('*').order('collected', { ascending: false }),
+        supabase.from('tests').select('*').order('collected', { ascending: false }).limit(10000),
         supabase.from('clinics').select('id, name'),
       ])
       setAccounts(acc.data || [])
