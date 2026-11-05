@@ -34,7 +34,6 @@ export default function Dashboard({ session }) {
 
   async function loadProfile() {
     const { data, error } = await supabase.from('profiles').select('id, full_name, role').eq('id', session.user.id).single()
-    console.log('Profile load:', data, error)
     setProfile(data || { role: 'rep', full_name: session.user.email })
   }
 
@@ -49,7 +48,6 @@ export default function Dashboard({ session }) {
     setProviders(p.data || [])
     setExpenses(e.data || [])
     setTests(testData.data || [])
-    if (testData.data?.[0]) console.log('Sample test:', testData.data[0])
     const { data: repsData } = await supabase.from('profiles').select('*').eq('role', 'rep')
     setReps(repsData || [])
   }
@@ -306,11 +304,43 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
-          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests from assigned reps</p>
+          {(() => {
+            const managerTests = filteredTests.filter(t => {
+              const clinic = clinics.find(c => c.id === t.clinic_id)
+              const rep = reps.find(r => r.id === clinic?.rep_id)
+              return rep?.manager_id
+            })
+            const byManager = {}
+            managerTests.forEach(t => {
+              const clinic = clinics.find(c => c.id === t.clinic_id)
+              const rep = reps.find(r => r.id === clinic?.rep_id)
+              const mgr = reps.find(r => r.id === rep?.manager_id)
+              if (mgr) byManager[mgr.full_name] = (byManager[mgr.full_name] || 0) + 1
+            })
+            const list = Object.entries(byManager).sort((a, b) => b[1] - a[1])
+            return list.length ? list.map(([name, count]) => (
+              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
+                <span>{name}</span><span>{count}</span>
+              </div>
+            )) : <p style={{ color: '#6b7280', fontSize: 13 }}>No data in range</p>
+          })()}
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
-          <p style={{ color: '#6b7280', fontSize: 13 }}>Total tests by rep</p>
+          {(() => {
+            const byRep = {}
+            filteredTests.forEach(t => {
+              const clinic = clinics.find(c => c.id === t.clinic_id)
+              const rep = reps.find(r => r.id === clinic?.rep_id)
+              if (rep) byRep[rep.full_name] = (byRep[rep.full_name] || 0) + 1
+            })
+            const list = Object.entries(byRep).sort((a, b) => b[1] - a[1])
+            return list.length ? list.map(([name, count]) => (
+              <div key={name} style={{ display: 'flex', justifyContent: 'space-between', padding: '6px 0', borderBottom: '1px solid #1f2937' }}>
+                <span>{name}</span><span>{count}</span>
+              </div>
+            )) : <p style={{ color: '#6b7280', fontSize: 13 }}>No data in range</p>
+          })()}
         </div>
       </div>
     </div>
