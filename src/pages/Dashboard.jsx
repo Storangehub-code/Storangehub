@@ -50,6 +50,7 @@ export default function Dashboard({ session }) {
     setTests(testData.data || [])
     const { data: repsData } = await supabase.from('profiles').select('*').eq('role', 'rep')
     setReps(repsData || [])
+    if (profile?.role === 'rep') setSelectedReps([session.user.id])
   }
 
   const role = profile?.role || 'rep'
@@ -110,12 +111,12 @@ export default function Dashboard({ session }) {
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'accounts' && selectedClinic && !selectedProvider && (
-          <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />
+          <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} role={role} />
         )}
         {selectedProvider && <ProviderDetail provider={selectedProvider} onBack={() => setSelectedProvider(null)} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
-        {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} />}
+        {page === 'reps' && <RepsList selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} />}
           {page === 'managers' && <ManagersList />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} reps={reps} />}
@@ -719,7 +720,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
   )
 }
 
-function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectProvider, isProspect }) {
+function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectProvider, isProspect, role }) {
   const [showAdd, setShowAdd] = useState(false)
   const [tab, setTab] = useState('info')
   const [prov, setProv] = useState({ name: '', title: 'MD', npi: '', email: '', phone: '' })
@@ -775,9 +776,9 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
             <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
             <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
             <input value={editForm.emr || ''} onChange={e => setEditForm({...editForm, emr: e.target.value})} placeholder="EMR" />
-            <input value={editForm.ordering_url || ''} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} placeholder="Custom Ordering URL" style={{ gridColumn: 'span 2' }} />
-            <input value={editForm.supplies_url || ''} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} placeholder="Custom Supplies URL" style={{ gridColumn: 'span 2' }} />
-            <div style={{ gridColumn: 'span 2' }}>
+            {(role === 'global_admin' || role === 'manager') && <input value={editForm.ordering_url || ''} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} placeholder="Custom Ordering URL" style={{ gridColumn: 'span 2' }} />}
+            {(role === 'global_admin' || role === 'manager') && <input value={editForm.supplies_url || ''} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} placeholder="Custom Supplies URL" style={{ gridColumn: 'span 2' }} />}
+            {(role === 'global_admin' || role === 'manager') && <div style={{ gridColumn: 'span 2' }}>
               <label style={{ fontSize: 13, color: '#9ca3af' }}>Upload Requisition</label>
               <input type="file" onChange={async (e) => {
                 const file = e.target.files[0]
@@ -1595,7 +1596,7 @@ function Followups({ clinics }) {
   )
 }
 
-function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
+function RepsList({ selected, setSelected, clinics = [], tests = [], role }) {
   const [reps, setReps] = useState([])
   const [managers, setManagers] = useState([])
   const [showCreate, setShowCreate] = useState(false)
@@ -1653,7 +1654,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
                 <td>{managers.find(m => m.id === r.manager_id)?.full_name || '—'}</td>
                 <td>{clinics.filter(c => c.rep_id === r.id).length}</td>
                 <td>{tests.filter(t => clinics.some(c => c.id === t.clinic_id && c.rep_id === r.id)).length}</td>
-                <td><button className="btn secondary btn-sm" onClick={() => startEdit(r)}>Edit</button></td>
+                <td>{role === 'global_admin' && <button className="btn secondary btn-sm" onClick={() => startEdit(r)}>Edit</button>}</td>
               </tr>
             ))}
           </tbody>
@@ -1664,7 +1665,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [] }) {
         <button className="btn secondary" onClick={selectAll}>Select All</button>
         <button className="btn" onClick={applyFilter}>Filter</button>
       </div>
-      <div className="card" id="rep-form" style={{ marginTop: 16 }}>
+      {role === 'global_admin' && <div className="card" id="rep-form" style={{ marginTop: 16 }}>
         <h3 style={{ marginBottom: 12 }}>{editing ? "Edit Rep" : "Create New Rep"}</h3>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 10 }}>
           <div><label style={{ fontSize: 13, color: '#9ca3af' }}>First Name</label><input value={form.first} onChange={e => setForm({...form, first: e.target.value})} /></div>
