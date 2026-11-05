@@ -43,7 +43,7 @@ export default function Dashboard({ session }) {
       supabase.from('clinics').select('*').order('name'),
       supabase.from('providers').select('*, clinics(name)').order('name'),
       supabase.from('expenses').select('*').order('created_at', { ascending: false }),
-      supabase.from('tests').select('*').order('collected_at', { ascending: false })
+      supabase.from('tests').select('*').order('collected_at', { ascending: false }).limit(10000)
     ])
     setClinics(c.data || [])
     setProviders(p.data || [])
@@ -106,7 +106,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
         
-        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} />}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} expenses={expenses} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers.filter(p => p.clinic_id === selectedClinic.id)} tests={tests.filter(t => t.clinic_id === selectedClinic.id)} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} isProspect={true} />}
@@ -130,7 +130,7 @@ export default function Dashboard({ session }) {
   )
 }
 
-function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps }) {
+function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps, onSelectClinic }) {
   const filteredClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
   const filteredProviders = selectedReps?.length > 0 ? providers.filter(p => filteredClinics.some(c => c.id === p.clinic_id)) : providers
   const filteredTests = selectedReps?.length > 0 ? tests.filter(t => filteredClinics.some(c => c.id === t.clinic_id)) : tests
@@ -233,12 +233,12 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <table style={{ fontSize: 13 }}>
             <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Practice</th></tr></thead>
             <tbody>
-              {(tests || []).slice(testPage * 10, (testPage + 1) * 10).map(t => (
+              {(tests || []).sort((a, b) => new Date(b.collected_at || b.collected || 0) - new Date(a.collected_at || a.collected || 0)).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
                   <td>{formatDate(t.collected_at || t.collected || t.collected_date)}</td>
-                  <td style={{ color: '#14b8a6' }}>{t.panel || t.test_type || '—'}</td>
-                  <td>{t.clinic_name || t.clinic || clinics.find(c => testBelongsToClinic(t, c))?.name || '—'}</td>
+                  <td style={{ color: '#14b8a6' }}>{t.test_type || t.panel || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c) onSelectClinic(c) }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
               ))}
             </tbody>
