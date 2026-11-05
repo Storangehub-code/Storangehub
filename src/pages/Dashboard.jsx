@@ -318,7 +318,11 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
   const estimatedRevenue = totalTests * 125
 
   const rangeLabel = selectedMonth
-    ? new Date(selectedMonth + '-01').toLocaleDateString('en-US', { month: 'long', year: 'numeric' })
+    ? (() => {
+        const [y, m] = selectedMonth.split('-')
+        const names = ['January','February','March','April','May','June','July','August','September','October','November','December']
+        return `${names[Number(m) - 1]} ${y}`
+      })()
     : (dateRange.start || dateRange.end
         ? `${dateRange.start ? dateRange.start.toLocaleDateString() : 'Start'} – ${dateRange.end ? dateRange.end.toLocaleDateString() : 'End'}`
         : 'All Time')
@@ -331,9 +335,6 @@ function DashboardHome({ accounts, providers, tests, clinics, dateRange, setDate
       <div style={{ marginBottom: 20 }}>
         <h2 style={{ margin: '0 0 4px' }}>Dashboard</h2>
         <div style={{ fontSize: 13, color: '#9ca3af' }}>{rangeLabel} · Click a month on the chart to filter</div>
-      <div style={{ background: '#fbbf24', color: '#000', padding: 10, borderRadius: 6, marginBottom: 12, fontSize: 12 }}>
-        DEBUG: selectedMonth={selectedMonth || 'none'} | filtered={filteredTests.length} | sample={tests.slice(0, 3).map(t => `${t.accession}: ${getMonthFromTest(t)}`).join(', ')}
-      </div>
       </div>
 
       <div style={{ background: '#1f2937', padding: 16, borderRadius: 12, marginBottom: 20 }}>
