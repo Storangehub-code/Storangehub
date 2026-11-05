@@ -1684,7 +1684,7 @@ function RepsList({ selected, setSelected, clinics = [], tests = [], role }) {
         </div>
         <div style={{ textAlign: 'right' }}><button className="btn" onClick={createRep}>{editing ? "Update Rep" : "Create Rep"}</button>
           {editing && <button className="btn secondary" style={{ marginLeft: 8 }} onClick={() => { setEditing(null); setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' }) }}>Cancel</button>}</div>
-      </div>
+      </div>}
     </div>
   )
 }
