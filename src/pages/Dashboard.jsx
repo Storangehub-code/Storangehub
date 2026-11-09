@@ -224,7 +224,6 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="kpi"><div className="kpi-value">{totalTests}</div><div className="kpi-label">Tests</div><div className="kpi-change up">↑ Active tracking</div></div>
         <div className="kpi"><div className="kpi-value">{activeAccounts}</div><div className="kpi-label">Active Accounts</div><div className="kpi-change up">{clinics.length} total</div></div>
         <div className="kpi"><div className="kpi-value">{providers.length}</div><div className="kpi-label">Providers</div></div>
-        <div className="kpi"><div className="kpi-value">${(totalTests * 125).toLocaleString()}</div><div className="kpi-label">Est. Revenue</div><div className="kpi-change up">$125/test</div></div>
         <div className="kpi"><div className="kpi-value" style={{ color: needAttention > 0 ? '#ef4444' : '#10b981' }}>{needAttention}</div><div className="kpi-label">Need Attention</div><div className="kpi-change down">No recent tests</div></div>
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '2fr 1fr 1fr', gap: 16, marginBottom: 16 }}>
