@@ -1037,6 +1037,11 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
 }
 
 function ProviderDetail({ provider, onBack }) {
+  const [tests, setTests] = useState([])
+  useEffect(() => {
+    if (!provider?.id) return
+    supabase.from('tests').select('*').eq('provider_id', provider.id).order('collected', { ascending: false }).then(({ data }) => setTests(data || []))
+  }, [provider])
   return (
     <div>
       <button className="btn secondary" onClick={onBack} style={{ marginBottom: 16 }}>← Back</button>
@@ -1046,11 +1051,34 @@ function ProviderDetail({ provider, onBack }) {
         <p style={{ marginBottom: 8 }}><strong>Email:</strong> {provider.email || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Phone:</strong> {provider.phone || '—'}</p>
         <p style={{ marginBottom: 8 }}><strong>Clinic:</strong> {provider.clinics?.name || '—'}</p>
-        <p><strong>Samples:</strong> {provider.samples || 0}</p>
+        <p><strong>Samples:</strong> {tests.length}</p>
       </div>
       <div className="card">
         <h3 style={{ marginBottom: 12 }}>Tests</h3>
-        <p style={{ color: '#6b7280' }}>No tests for this provider yet.</p>
+        {tests.length === 0 ? (
+          <p style={{ color: '#6b7280' }}>No tests for this provider yet.</p>
+        ) : (
+          <table style={{ width: '100%', borderCollapse: 'collapse' }}>
+            <thead>
+              <tr style={{ textAlign: 'left', borderBottom: '1px solid #334155' }}>
+                <th style={{ padding: '8px 0' }}>Accession</th>
+                <th style={{ padding: '8px 0' }}>Test</th>
+                <th style={{ padding: '8px 0' }}>Collected</th>
+                <th style={{ padding: '8px 0' }}>Finalized</th>
+              </tr>
+            </thead>
+            <tbody>
+              {tests.map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid #1e293b' }}>
+                  <td style={{ padding: '8px 0' }}>{t.accession}</td>
+                  <td style={{ padding: '8px 0' }}>{t.test_type || t.panel || '—'}</td>
+                  <td style={{ padding: '8px 0' }}>{t.collected || '—'}</td>
+                  <td style={{ padding: '8px 0' }}>{t.finalized || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        )}
       </div>
     </div>
   )
