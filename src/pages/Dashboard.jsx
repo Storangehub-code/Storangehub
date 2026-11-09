@@ -53,8 +53,19 @@ export default function Dashboard({ session }) {
     if (profile?.role === 'rep') setSelectedReps([session.user.id])
   }
 
+  async function logActivity(action, details) {
+    if (!session?.user) return
+    await supabase.from('activity_log').insert({
+      user_id: session.user.id,
+      user_email: session.user.email,
+      action,
+      details
+    })
+  }
+
   const role = profile?.role || 'rep'
-  const roleLabel = { global_admin: 'Global Admin', manager: 'Manager', rep: 'Rep' }[role] || 'Rep'
+  const isMaster = session.user.email === 'spud.w.mann@gmail.com'
+  const roleLabel = isMaster ? 'Master' : ({ global_admin: 'Global Admin', manager: 'Manager', rep: 'Rep' }[role] || 'Rep')
 
   const allNav = [
     { id: 'dashboard', label: 'Dashboard' },
@@ -69,7 +80,8 @@ export default function Dashboard({ session }) {
     { id: 'reports', label: 'Reports' },
     { id: 'followups', label: 'Follow-ups' },
     { id: 'training', label: 'Training' },
-    { id: 'users', label: 'Users', adminOnly: true }
+    { id: 'users', label: 'Users', adminOnly: true },
+    ...(isMaster ? [{ id: 'master', label: 'Master Log' }] : [])
   ]
   const nav = allNav.filter(n => !n.adminOnly || role === 'global_admin')
 
@@ -85,7 +97,7 @@ export default function Dashboard({ session }) {
           <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
         </div>
         {nav.map(n => (
-          <div key={n.id} onClick={() => { if (!n.disabled) { setPage(n.id); setSelectedClinic(null); setSelectedProvider(null) } }} 
+          <div key={n.id} onClick={() => { if (!n.disabled) { setPage(n.id); setSelectedClinic(null); setSelectedProvider(null); logActivity('page_view', n.label) } }} 
             style={{ padding: '10px 16px', cursor: n.disabled ? 'not-allowed' : 'pointer', borderRadius: 8, marginBottom: 4, background: page === n.id && !selectedClinic ? '#0d9488' : 'transparent', fontSize: 14, color: n.disabled ? '#4b5563' : 'inherit' }}>
             {n.label}
           </div>
@@ -123,6 +135,7 @@ export default function Dashboard({ session }) {
         {page === 'notifications' && <Notifications items={notifications} />}
         {page === 'followups' && <Followups clinics={clinics} />}
         {page === 'training' && <Training role={role} />}
+        {page === 'master' && isMaster && <MasterLog session={session} />}
         {page === 'users' && role === 'global_admin' && <Users />}
       </div>
     </div>
@@ -1990,6 +2003,46 @@ function Users() {
           <button className="btn secondary" onClick={() => setEditing(null)} style={{ marginLeft: 8 }}>Cancel</button>
         </div>
       )}
+    </div>
+  )
+}
+
+function MasterLog({ session }) {
+  const [logs, setLogs] = useState([])
+  const [loading, setLoading] = useState(true)
+
+  useEffect(() => {
+    loadLogs()
+    const interval = setInterval(loadLogs, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  async function loadLogs() {
+    const { data } = await supabase.from('activity_log').select('*').order('created_at', { ascending: false }).limit(100)
+    setLogs(data || [])
+    setLoading(false)
+  }
+
+  return (
+    <div>
+      <div className="card">
+        <h3 style={{ marginBottom: 12 }}>Activity Log <span style={{ fontSize: 12, color: '#6b7280' }}>(refreshes every 10s)</span></h3>
+        {loading && <p>Loading...</p>}
+        {!loading && !logs.length && <p style={{ color: '#6b7280' }}>No activity yet. Actions will appear here.</p>}
+        <table style={{ fontSize: 13 }}>
+          <thead><tr><th>Time</th><th>User</th><th>Action</th><th>Details</th></tr></thead>
+          <tbody>
+            {logs.map(l => (
+              <tr key={l.id}>
+                <td>{new Date(l.created_at).toLocaleString()}</td>
+                <td>{l.user_email || '—'}</td>
+                <td>{l.action}</td>
+                <td style={{ color: '#9ca3af' }}>{l.details || '—'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
     </div>
   )
 }
