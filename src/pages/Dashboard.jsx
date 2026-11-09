@@ -268,13 +268,14 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Recent Testing Activity</h3>
           <table style={{ fontSize: 13 }}>
-            <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Practice</th></tr></thead>
+            <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Provider</th><th>Practice</th></tr></thead>
             <tbody>
               {(tests || []).sort((a, b) => new Date(b.collected_at || b.collected || 0) - new Date(a.collected_at || a.collected || 0)).slice(testPage * 10, (testPage + 1) * 10).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
                   <td>{formatDate(t.collected_at || t.collected || t.collected_date)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type || t.panel || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const p = providers.find(pr => pr.id === t.provider_id); if (p) { onSelectProvider(p); setPage('providers') } }}>{formatName(providers.find(p => p.id === t.provider_id)?.name) || '—'}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c) { onSelectClinic(c); setPage('accounts') } }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
               ))}
