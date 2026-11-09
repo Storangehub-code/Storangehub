@@ -163,8 +163,8 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
   const activeAccounts = filteredClinics.filter(c => dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
   const activeProviders = filteredProviders.filter(p => dateFilteredTests.some(t => (t.provider_name || '').toLowerCase().includes((p.name || '').toLowerCase().split(',')[0]))).length
   const needAttention = filteredClinics.filter(c => !dateFilteredTests.some(t => testBelongsToClinic(t, c))).length
-  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct']
-  const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10' }
+  const months = ['Apr','May','Jun','Jul','Aug','Sep','Oct','Nov']
+  const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11' }
   const monthlyCounts = {}
   months.forEach(m => { monthlyCounts[m] = 0 })
   ;(filteredTests || []).forEach(t => {
@@ -231,7 +231,14 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <h3 style={{ marginBottom: 12 }}>Monthly Testing Volume</h3>
           <div style={{ display: 'flex', alignItems: 'flex-end', height: 140, gap: 8 }}>
             {months.map(m => (
-              <div key={m} style={{ flex: 1, textAlign: 'center' }}>
+              <div key={m} style={{ flex: 1, textAlign: 'center', cursor: 'pointer' }} onClick={() => {
+                const mm = monthMap[m]
+                const year = '2026'
+                const start = `${year}-${mm}-01`
+                const lastDay = new Date(year, parseInt(mm), 0).getDate()
+                const end = `${year}-${mm}-${String(lastDay).padStart(2,'0')}`
+                setDateRange({ start, end })
+              }}>
                 <div style={{ fontSize: 11, fontWeight: 600, marginBottom: 4 }}>{monthlyCounts[m]}</div>
                 <div style={{ height: `${Math.max(20, (monthlyCounts[m] / maxCount) * 120)}px`, background: 'linear-gradient(to top, #0d9488, #14b8a6)', borderRadius: '4px 4px 0 0' }}></div>
                 <div style={{ fontSize: 11, color: '#64748b', marginTop: 4 }}>{m}</div>
