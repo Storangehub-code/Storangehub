@@ -3,12 +3,15 @@
   publish = "dist"
   functions = "netlify/functions"
 
+# Force all traffic on the Response DX subdomain to the React app
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  force = true
   conditions = {Host = ["responsedx.storangehub.com"]}
 
+# Main domain fallback
 [[redirects]]
   from = "/*"
   to = "/index.html"
