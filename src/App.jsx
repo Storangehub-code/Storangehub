@@ -16,11 +16,11 @@ function App() {
     );
   }
 
-  // Main marketing site
+  // Main marketing site (storangehub.com)
   return (
     <BrowserRouter>
       <Routes>
-        <Route path="/" element={<div style={{padding: '2rem'}}><h1>Marketing Site</h1><p>Main site home</p></div>} />
+        <Route path="/" element={<div style={{padding: '2rem', color: 'white', background: '#0f172a', minHeight: '100vh'}}><h1>Marketing Site</h1><p>Main site home</p></div>} />
         <Route path="*" element={<Navigate to="/" />} />
       </Routes>
     </BrowserRouter>
