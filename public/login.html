@@ -151,15 +151,19 @@
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({ email, password })
         });
-        const data = await res.json();
-        if (data.redirect) {
+
+        const text = await res.text();
+        let data;
+        try { data = JSON.parse(text); } catch { data = { error: text }; }
+
+        if (res.ok && data.redirect) {
           notice.textContent = data.message || 'Redirecting...';
           window.location.href = data.redirect;
         } else {
-          notice.textContent = data.error || 'Could not find your organization.';
+          notice.textContent = data.error || data.message || 'Could not find your organization. (' + res.status + ')';
         }
       } catch (err) {
-        notice.textContent = 'Login service unavailable. Please try again.';
+        notice.textContent = 'Login service unavailable: ' + err.message;
       }
     });
   </script>
