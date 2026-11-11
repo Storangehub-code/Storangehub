@@ -1,7 +1,7 @@
 // Netlify function: look up email and return the correct org subdomain
-// Later this will query Supabase for the user's organization
+// ESM version (compatible with "type": "module")
 
-exports.handler = async (event) => {
+export default async (event) => {
   if (event.httpMethod !== "POST") {
     return { statusCode: 405, body: JSON.stringify({ error: "Method not allowed" }) };
   }
@@ -13,7 +13,7 @@ exports.handler = async (event) => {
     }
 
     // TODO: Query Supabase for the user's organization
-    // For now, hard-coded demo mapping
+    // Demo mapping for now
     const demoOrgs = {
       "spud.w.mann@gmail.com": "responsedx",
       "evan.w.mann@gmail.com": "responsedx",
