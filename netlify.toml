@@ -3,29 +3,32 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# On the Response DX subdomain, root loads the CRM login
-[[redirects]]
-  from = "/"
-  to = "/login.html"
-  status = 200
-  force = true
-  conditions = {Host = ["responsedx.storangehub.com"]}
-
-# Everything else on the subdomain is the SPA
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  conditions = {Host = ["responsedx.storangehub.com"]}
-
-# Main site stays marketing
+# ===== MAIN DOMAIN (storangehub.com) =====
 [[redirects]]
   from = "/"
   to = "/marketing.html"
   status = 200
   force = true
+  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
+
+[[redirects]]
+  from = "/login"
+  to = "/login.html"
+  status = 200
+  force = true
+  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
 
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
+  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
+
+# ===== CRM SUBDOMAIN (responsedx.storangehub.com) =====
+# Everything on the subdomain goes to the CRM app
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  force = true
+  conditions = {Host = ["responsedx.storangehub.com"]}
