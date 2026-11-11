@@ -3,7 +3,7 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# Force CRM subdomain to the login page
+# CRM subdomain — root goes to login, everything else is SPA
 [[redirects]]
   from = "/"
   to = "/login.html"
@@ -17,16 +17,10 @@
   status = 200
   conditions = {Host = ["responsedx.storangehub.com"]}
 
-# Normal marketing site
+# Marketing site (everything else)
 [[redirects]]
   from = "/"
   to = "/marketing.html"
-  status = 200
-  force = true
-
-[[redirects]]
-  from = "/login"
-  to = "/login.html"
   status = 200
   force = true
 
