@@ -1,5 +1,5 @@
 import { BrowserRouter, Routes, Route, Navigate } from 'react-router-dom';
-import Dashboard from './Dashboard'; // ← change this path if your real dashboard file is named something else
+import Dashboard from './pages/Dashboard';
 
 function App() {
   const isResponseDX = window.location.hostname === 'responsedx.storangehub.com';
