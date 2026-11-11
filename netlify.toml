@@ -3,24 +3,33 @@
   publish = "dist"
   functions = "netlify/functions"
 
-[build.environment]
-  SECRETS_SCAN_OMIT_KEYS = "VITE_RESEND_KEY,VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL,RESEND_KEY"
+# Force CRM subdomain to the login page
+[[redirects]]
+  from = "/"
+  to = "/login.html"
+  status = 200
+  force = true
+  conditions = {Host = ["responsedx.storangehub.com"]}
 
-# Force marketing page at root
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Host = ["responsedx.storangehub.com"]}
+
+# Normal marketing site
 [[redirects]]
   from = "/"
   to = "/marketing.html"
   status = 200
   force = true
 
-# Login page
 [[redirects]]
   from = "/login"
   to = "/login.html"
   status = 200
   force = true
 
-# Everything else falls back to the React CRM
 [[redirects]]
   from = "/*"
   to = "/index.html"
