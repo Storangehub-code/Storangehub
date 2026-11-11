@@ -3,31 +3,14 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# Main domain
-[[redirects]]
-  from = "/"
-  to = "/marketing.html"
-  status = 200
-  force = true
-  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
-
-[[redirects]]
-  from = "/login"
-  to = "/login.html"
-  status = 200
-  force = true
-  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
-
 [[redirects]]
   from = "/*"
   to = "/index.html"
   status = 200
-  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
-
-# CRM subdomain — force everything to the app root
-[[redirects]]
-  from = "/*"
-  to = "/index.html"
-  status = 200
-  force = true
   conditions = {Host = ["responsedx.storangehub.com"]}
+
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
+  conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
