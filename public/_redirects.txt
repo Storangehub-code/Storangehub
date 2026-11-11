@@ -1,0 +1,4 @@
+https://responsedx.storangehub.com/     /login   301
+https://responsedx.storangehub.com      /login   301
+
+/*    /index.html   200
