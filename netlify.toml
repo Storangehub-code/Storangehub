@@ -3,7 +3,7 @@
   publish = "dist"
   functions = "netlify/functions"
 
-# ===== MAIN DOMAIN (storangehub.com) =====
+# Main domain
 [[redirects]]
   from = "/"
   to = "/marketing.html"
@@ -24,8 +24,7 @@
   status = 200
   conditions = {Host = ["storangehub.com", "www.storangehub.com"]}
 
-# ===== CRM SUBDOMAIN (responsedx.storangehub.com) =====
-# Everything on the subdomain goes to the CRM app
+# CRM subdomain — force everything to the app root
 [[redirects]]
   from = "/*"
   to = "/index.html"
