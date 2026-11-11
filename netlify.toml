@@ -6,25 +6,21 @@
 [build.environment]
   SECRETS_SCAN_OMIT_KEYS = "VITE_RESEND_KEY,VITE_SUPABASE_ANON_KEY,VITE_SUPABASE_URL,RESEND_KEY"
 
-# Serve marketing page at root
+# Force marketing page at root
 [[redirects]]
   from = "/"
   to = "/index.html"
   status = 200
+  force = true
 
-# Serve login page
+# Login page
 [[redirects]]
   from = "/login"
   to = "/login.html"
   status = 200
+  force = true
 
-# Send everything else to the React CRM (served under /app)
-[[redirects]]
-  from = "/app/*"
-  to = "/index.html"
-  status = 200
-
-# Fallback for SPA routes inside the CRM
+# Everything else falls back to the React app
 [[redirects]]
   from = "/*"
   to = "/index.html"
