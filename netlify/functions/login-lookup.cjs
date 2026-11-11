@@ -1,4 +1,4 @@
-export default async (event) => {
+exports.handler = async (event) => {
   const headers = {
     "Access-Control-Allow-Origin": "*",
     "Access-Control-Allow-Headers": "Content-Type",
@@ -14,13 +14,10 @@ export default async (event) => {
     const body = JSON.parse(event.body || "{}");
     const email = String(body.email || "").trim().toLowerCase();
 
-    // Hard-coded demo mapping
     let slug = "demo";
     if (email === "spud.w.mann@gmail.com" || email === "evan.w.mann@gmail.com") {
       slug = "responsedx";
     }
-
-    const redirect = "https://" + slug + ".storangehub.com";
 
     return {
       statusCode: 200,
@@ -29,7 +26,7 @@ export default async (event) => {
         success: true,
         email: email,
         org: slug,
-        redirect: redirect,
+        redirect: "https://" + slug + ".storangehub.com",
         message: "Redirecting to " + slug + ".storangehub.com"
       })
     };
@@ -39,7 +36,7 @@ export default async (event) => {
       headers,
       body: JSON.stringify({
         success: false,
-        error: "Lookup failed: " + (err.message || "unknown"),
+        error: String(err.message || err),
         redirect: "https://demo.storangehub.com"
       })
     };
