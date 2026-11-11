@@ -9,7 +9,7 @@
 # Force marketing page at root
 [[redirects]]
   from = "/"
-  to = "/index.html"
+  to = "/marketing.html"
   status = 200
   force = true
 
@@ -20,7 +20,7 @@
   status = 200
   force = true
 
-# Everything else falls back to the React app
+# Everything else falls back to the React CRM
 [[redirects]]
   from = "/*"
   to = "/index.html"
