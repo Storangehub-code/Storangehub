@@ -14,10 +14,8 @@ exports.handler = async (event) => {
     const body = JSON.parse(event.body || "{}");
     const email = String(body.email || "").trim().toLowerCase();
 
-    let slug = "demo";
-    if (email === "spud.w.mann@gmail.com" || email === "evan.w.mann@gmail.com") {
-      slug = "responsedx";
-    }
+    // Default everyone to responsedx. Add specific exceptions only if needed.
+    let slug = "responsedx";
 
     return {
       statusCode: 200,
@@ -37,7 +35,7 @@ exports.handler = async (event) => {
       body: JSON.stringify({
         success: false,
         error: String(err.message || err),
-        redirect: "https://demo.storangehub.com"
+        redirect: "https://responsedx.storangehub.com"
       })
     };
   }
