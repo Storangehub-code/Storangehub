@@ -124,7 +124,7 @@ export default function Dashboard({ session }) {
         )}
         {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} currentUser={session.user} onRefresh={loadData} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
-        {page === 'providers' && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} selectedReps={selectedReps} />}
+        {page === 'providers' && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={(c) => { setSelectedClinic(c); setPage('accounts') }} selectedReps={selectedReps} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} session={session} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} selectedReps={selectedReps} />}

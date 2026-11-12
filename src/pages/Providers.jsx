@@ -7,9 +7,9 @@ function formatName(name) {
   return name
 }
 
-export default function Providers({ providers = [], clinics = [], tests = [], onSelect, selectedReps = [] }) {
+export default function Providers({ providers = [], clinics = [], tests = [], onSelect, onSelectClinic, selectedReps = [] }) {
   const [search, setSearch] = useState('')
-  const [sort, setSort] = useState('name')
+  const [sort, setSort] = useState('tests')
 
   let filtered = providers
   if (selectedReps.length > 0) {
@@ -55,14 +55,22 @@ export default function Providers({ providers = [], clinics = [], tests = [], on
             </tr>
           </thead>
           <tbody>
-            {filtered.map(p => (
-              <tr key={p.id} onClick={() => onSelect && onSelect(p)} style={{ cursor: 'pointer' }}>
-                <td style={{ color: '#14b8a6' }}>{formatName(p.name)}</td>
-                <td>{clinics.find(c => c.id === p.clinic_id)?.name || p.clinics?.name || '—'}</td>
-                <td>{p.npi || '—'}</td>
-                <td>{tests.filter(t => t.provider_id === p.id).length}</td>
-              </tr>
-            ))}
+            {filtered.map(p => {
+              const clinic = clinics.find(c => c.id === p.clinic_id)
+              return (
+                <tr key={p.id} style={{ cursor: 'pointer' }}>
+                  <td style={{ color: '#14b8a6' }} onClick={() => onSelect && onSelect(p)}>{formatName(p.name)}</td>
+                  <td 
+                    style={{ color: '#14b8a6', cursor: 'pointer' }} 
+                    onClick={(e) => { e.stopPropagation(); if (onSelectClinic && clinic) onSelectClinic(clinic) }}
+                  >
+                    {clinic?.name || p.clinics?.name || '—'}
+                  </td>
+                  <td onClick={() => onSelect && onSelect(p)}>{p.npi || '—'}</td>
+                  <td onClick={() => onSelect && onSelect(p)}>{tests.filter(t => t.provider_id === p.id).length}</td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {!filtered.length && <p style={{ color: '#6b7280', padding: 16 }}>No providers found.</p>}
