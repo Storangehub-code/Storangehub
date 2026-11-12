@@ -1,6 +1,10 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 import Followups from './Followups'
+import Reps from './Reps'
+import Managers from './Managers'
+import Users from './Users'
+import MasterLog from './MasterLog'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -90,8 +94,16 @@ export default function Dashboard({ session }) {
         </div>
 
         {page === 'followups' && <Followups clinics={clinics} session={session} />}
-        {/* Other pages will be added here as we split them */}
-        {page === 'dashboard' && <div className="card"><p>Dashboard home — coming next</p></div>}
+        {page === 'reps' && <Reps selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} />}
+        {page === 'managers' && <Managers />}
+        {page === 'users' && role === 'global_admin' && <Users />}
+        {page === 'master' && isMaster && <MasterLog />}
+        
+        {page === 'dashboard' && <div className="card"><p>Dashboard home — more pages coming</p></div>}
+        {page === 'accounts' && <div className="card"><p>Accounts page — coming soon</p></div>}
+        {page === 'providers' && <div className="card"><p>Providers page — coming soon</p></div>}
+        {page === 'expenses' && <div className="card"><p>Expenses page — coming soon</p></div>}
+        {page === 'reports' && <div className="card"><p>Reports page — coming soon</p></div>}
       </div>
     </div>
   )
