@@ -3,8 +3,10 @@ import { supabase } from '../lib/supabase'
 
 export default function Prospects({ clinics = [], onSelect, selectedReps = [], reps = [], role, currentUser, onRefresh }) {
   const [search, setSearch] = useState('')
-  const [stage, setStage] = useState('all')
+  const [stageFilter, setStageFilter] = useState('all')
   const [showAdd, setShowAdd] = useState(false)
+  const [ordering, setOrdering] = useState(null)
+  const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [] })
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', address: '', phone: '', email: '', fax: '', stage: 'Cold', emr: '' })
   const [saving, setSaving] = useState(false)
 
@@ -15,8 +17,8 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
   if (search) {
     filtered = filtered.filter(c => (c.name || '').toLowerCase().includes(search.toLowerCase()))
   }
-  if (stage !== 'all') {
-    filtered = filtered.filter(c => (c.stage || 'Cold') === stage)
+  if (stageFilter !== 'all') {
+    filtered = filtered.filter(c => (c.stage || 'Cold') === stageFilter)
   }
 
   const handleAdd = async () => {
@@ -49,20 +51,104 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
     }
   }
 
-  const handleReadyToOrder = async (clinic) => {
-    const { error } = await supabase.from('clinics').update({ 
-      status: 'pending' 
-    }).eq('id', clinic.id)
-    if (error) {
-      alert('Error: ' + error.message)
-    } else {
-      if (onRefresh) onRefresh()
-    }
-  }
-
   const handleStageChange = async (clinic, newStage) => {
     await supabase.from('clinics').update({ stage: newStage }).eq('id', clinic.id)
     if (onRefresh) onRefresh()
+  }
+
+  const submitOrder = async () => {
+    const orderData = JSON.stringify(supplies)
+    await supabase.from('clinics').update({ stage: 'Pending', order_details: orderData }).eq('id', ordering.id)
+    
+    const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
+    if (admins) {
+      for (const admin of admins) {
+        await supabase.from('notifications').insert({
+          user_id: admin.id,
+          message: `New order request: ${ordering.name}`,
+          type: 'order_request',
+          clinic_id: ordering.id
+        })
+      }
+    }
+    
+    const orderDetails = `
+Clinic: ${ordering.name}
+Type: ${ordering.type || 'N/A'}
+City: ${ordering.city || 'N/A'}
+Phone: ${ordering.phone || 'N/A'}
+
+Supplies Requested:
+- Requisitions: ${supplies.reqs}
+- Wound kits: ${supplies.wound}
+- UTI kits: ${supplies.uti}
+- RPP kits: ${supplies.rpp}
+- SynoviFact: ${supplies.synovi}
+- Shipping: ${supplies.labels} x${supplies.labelQty}
+- Bags: ${supplies.bags}
+- Results: ${supplies.results.join(', ') || 'None'}
+    `
+    
+    try {
+      await fetch('/.netlify/functions/sendemail', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          to: 'spud.w.mann@gmail.com',
+          subject: 'New Order Request: ' + ordering.name,
+          text: orderDetails
+        })
+      })
+    } catch (e) { console.log('Email error', e) }
+    
+    alert('Order submitted! Pending Global Admin approval.')
+    setOrdering(null)
+    setSupplies({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [] })
+    if (onRefresh) onRefresh()
+  }
+
+  if (ordering) {
+    return (
+      <div className="card">
+        <h3 style={{ marginBottom: 16 }}>Ready to Order: {ordering.name}</h3>
+        <div style={{ marginBottom: 12 }}>
+          <label>Requisitions with kits?</label>
+          <select value={supplies.reqs} onChange={e => setSupplies({...supplies, reqs: e.target.value})} style={{ marginLeft: 8 }}>
+            <option value="yes">Yes</option><option value="no">No</option>
+          </select>
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+          <div><label>RDX Wound kits</label><input type="number" min="0" max="25" value={supplies.wound} onChange={e => setSupplies({...supplies, wound: e.target.value})} /></div>
+          <div><label>RDX UTI/UTI Plus</label><input type="number" min="0" max="25" value={supplies.uti} onChange={e => setSupplies({...supplies, uti: e.target.value})} /></div>
+          <div><label>RDX RPP</label><input type="number" min="0" max="25" value={supplies.rpp} onChange={e => setSupplies({...supplies, rpp: e.target.value})} /></div>
+          <div><label>RDX SynoviFact</label><input type="number" min="0" max="25" value={supplies.synovi} onChange={e => setSupplies({...supplies, synovi: e.target.value})} /></div>
+        </div>
+        <div style={{ marginBottom: 12 }}>
+          <label>Return Shipping Labels</label>
+          <select value={supplies.labels} onChange={e => setSupplies({...supplies, labels: e.target.value})} style={{ marginLeft: 8 }}>
+            <option>FedEx</option><option>UPS</option>
+          </select>
+          <input type="number" min="0" max="25" value={supplies.labelQty} onChange={e => setSupplies({...supplies, labelQty: e.target.value})} placeholder="Qty" style={{ marginLeft: 8, width: 80 }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label>Return Shipping Bags</label>
+          <input type="number" min="0" max="25" value={supplies.bags} onChange={e => setSupplies({...supplies, bags: e.target.value})} style={{ marginLeft: 8, width: 80 }} />
+        </div>
+        <div style={{ marginBottom: 16 }}>
+          <label style={{ display: 'block', marginBottom: 8 }}>Results Sent</label>
+          {['Fax', 'Portal', 'Encrypted Email'].map(opt => (
+            <label key={opt} style={{ marginRight: 16 }}>
+              <input type="checkbox" checked={supplies.results.includes(opt)} onChange={e => {
+                const results = e.target.checked ? [...supplies.results, opt] : supplies.results.filter(r => r !== opt)
+                setSupplies({...supplies, results})
+              }} /> {opt}
+            </label>
+          ))}
+        </div>
+        <button className="btn" onClick={submitOrder}>Submit Order</button>
+        <button className="btn secondary" onClick={() => setOrdering(null)} style={{ marginLeft: 8 }}>Cancel</button>
+      </div>
+    )
   }
 
   return (
@@ -75,7 +161,7 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
           onChange={e => setSearch(e.target.value)}
           style={{ flex: 1, maxWidth: 300 }}
         />
-        <select value={stage} onChange={e => setStage(e.target.value)}>
+        <select value={stageFilter} onChange={e => setStageFilter(e.target.value)}>
           <option value="all">All Stages</option>
           <option value="Cold">Cold</option>
           <option value="Warm">Warm</option>
@@ -104,19 +190,20 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
                   <select 
                     value={c.stage || 'Cold'} 
                     onChange={e => handleStageChange(c, e.target.value)}
-                    style={{ background: c.stage === 'HOT' ? '#ef4444' : c.stage === 'Warm' ? '#f59e0b' : '#6b7280', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px' }}
+                    style={{ background: c.stage === 'HOT' ? '#ef4444' : c.stage === 'Warm' ? '#f59e0b' : c.stage === 'Pending' ? '#8b5cf6' : '#6b7280', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px' }}
                   >
                     <option>Cold</option>
                     <option>Warm</option>
                     <option>HOT</option>
+                    <option>Pending</option>
                   </select>
                 </td>
                 <td>{reps.find(r => r.id === c.rep_id)?.full_name || '—'}</td>
                 <td>
-                  {c.status === 'pending' ? (
-                    <span style={{ color: '#f59e0b' }}>Pending Approval</span>
+                  {c.stage === 'Pending' ? (
+                    <span style={{ color: '#8b5cf6' }}>Pending Approval</span>
                   ) : (
-                    <button className="btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => handleReadyToOrder(c)}>
+                    <button className="btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => setOrdering(c)}>
                       Ready to Order
                     </button>
                   )}

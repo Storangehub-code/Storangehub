@@ -2,11 +2,11 @@ import { useState } from 'react'
 import { supabase } from '../lib/supabase'
 
 export default function ApproveAccounts({ clinics = [], onRefresh }) {
-  const pending = clinics.filter(c => c.status === 'pending')
+  const pending = clinics.filter(c => c.stage === 'Pending' && c.is_prospect)
 
   async function approve(id) {
     await supabase.from('clinics').update({ 
-      status: 'approved', 
+      stage: 'Approved', 
       is_prospect: false 
     }).eq('id', id)
     if (onRefresh) onRefresh()
@@ -14,7 +14,7 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
 
   async function reject(id) {
     if (!confirm('Reject this account?')) return
-    await supabase.from('clinics').update({ status: 'rejected' }).eq('id', id)
+    await supabase.from('clinics').update({ stage: 'Rejected' }).eq('id', id)
     if (onRefresh) onRefresh()
   }
 
