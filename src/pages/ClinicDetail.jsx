@@ -1,4 +1,5 @@
 import { useState } from 'react'
+import { supabase } from '../supabase'
 
 function formatProviderName(p) {
   const parts = (p.name || '').split(',').map(s => s.trim())
@@ -7,15 +8,43 @@ function formatProviderName(p) {
   return p.name || 'Unknown'
 }
 
-export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider }) {
+export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider, onRefresh }) {
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
+  const [showAddProvider, setShowAddProvider] = useState(false)
+  const [newProvider, setNewProvider] = useState({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
+  const [saving, setSaving] = useState(false)
 
   const clinicProviders = providers.filter(p => p.clinic_id === clinic.id)
   const clinicTests = tests.filter(t => t.clinic_id === clinic.id)
 
   const testCounts = {}
   clinicTests.forEach(t => { testCounts[t.test_type || 'Unknown'] = (testCounts[t.test_type || 'Unknown'] || 0) + 1 })
+
+  const handleAddProvider = async () => {
+    if (!newProvider.last || !newProvider.title || !newProvider.npi) {
+      alert('Last name, title, and NPI are required')
+      return
+    }
+    setSaving(true)
+    const name = `${newProvider.last}, ${newProvider.title},${newProvider.first}`
+    const { error } = await supabase.from('providers').insert({
+      clinic_id: clinic.id,
+      name,
+      title: newProvider.title,
+      email: newProvider.email || null,
+      phone: newProvider.phone || null,
+      npi: newProvider.npi
+    })
+    setSaving(false)
+    if (error) {
+      alert('Error adding provider: ' + error.message)
+    } else {
+      setShowAddProvider(false)
+      setNewProvider({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
+      if (onRefresh) onRefresh()
+    }
+  }
 
   return (
     <div>
@@ -67,11 +96,14 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
 
       {tab === 'providers' && (
         <div className="card">
-          <h3 style={{ marginBottom: 12 }}>Providers ({clinicProviders.length})</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <h3 style={{ margin: 0 }}>Providers ({clinicProviders.length})</h3>
+            <button className="btn" onClick={() => setShowAddProvider(true)}>+ Add Provider</button>
+          </div>
           {clinicProviders.map(p => (
             <div key={p.id} onClick={() => onSelectProvider && onSelectProvider(p)} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
               <div>
-                <div style={{ color: '#14b8a6', fontWeight: 500 }}>{p.name}</div>
+                <div style={{ color: '#14b8a6', fontWeight: 500 }}>{formatProviderName(p)}</div>
                 <div style={{ fontSize: 12, color: '#6b7280' }}>{p.title || ''} {p.npi ? `• NPI: ${p.npi}` : ''}</div>
               </div>
               <div style={{ color: '#9ca3af', fontSize: 13 }}>{clinicTests.filter(t => t.provider_id === p.id).length} tests</div>
@@ -122,6 +154,26 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             <h3 style={{ marginBottom: 16 }}>Edit Account</h3>
             <p style={{ color: '#9ca3af' }}>Edit form coming soon</p>
             <button className="btn secondary" style={{ marginTop: 16 }} onClick={() => setShowEdit(false)}>Close</button>
+          </div>
+        </div>
+      )}
+
+      {showAddProvider && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: 420 }}>
+            <h3 style={{ marginBottom: 16 }}>Add Provider</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <input placeholder="First Name" value={newProvider.first} onChange={e => setNewProvider({...newProvider, first: e.target.value})} />
+              <input placeholder="Last Name *" value={newProvider.last} onChange={e => setNewProvider({...newProvider, last: e.target.value})} />
+              <input placeholder="Title * (MD, PA, FNP, etc)" value={newProvider.title} onChange={e => setNewProvider({...newProvider, title: e.target.value})} />
+              <input placeholder="NPI *" value={newProvider.npi} onChange={e => setNewProvider({...newProvider, npi: e.target.value})} />
+              <input placeholder="Email" value={newProvider.email} onChange={e => setNewProvider({...newProvider, email: e.target.value})} />
+              <input placeholder="Phone" value={newProvider.phone} onChange={e => setNewProvider({...newProvider, phone: e.target.value})} />
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button className="btn" onClick={handleAddProvider} disabled={saving}>{saving ? 'Saving...' : 'Add Provider'}</button>
+              <button className="btn secondary" onClick={() => setShowAddProvider(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
