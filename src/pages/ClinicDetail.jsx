@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { supabase } from '../supabase'
+import { supabase } from '../lib/supabase'
 
 function formatProviderName(p) {
   const parts = (p.name || '').split(',').map(s => s.trim())
