@@ -15,6 +15,7 @@ import Training from './Training'
 import ApproveAccounts from './ApproveAccounts'
 import DashboardHome from './DashboardHome'
 import ClinicDetail from './ClinicDetail'
+import ProviderDetail from './ProviderDetail'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -104,13 +105,21 @@ export default function Dashboard({ session }) {
         </div>
 
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} />}
-        {selectedClinic && (
+        {selectedClinic && !selectedProvider && (
           <ClinicDetail
             clinic={selectedClinic}
             providers={providers}
             tests={tests}
             onBack={() => setSelectedClinic(null)}
             onSelectProvider={setSelectedProvider}
+          />
+        )}
+        {selectedProvider && (
+          <ProviderDetail
+            provider={selectedProvider}
+            tests={tests}
+            clinics={clinics}
+            onBack={() => setSelectedProvider(null)}
           />
         )}
         {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}

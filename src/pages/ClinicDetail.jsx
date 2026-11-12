@@ -1,4 +1,9 @@
-import { useState } from 'react'
+function formatProviderName(p) {
+  const parts = (p.name || '').split(',').map(s => s.trim())
+  if (parts.length >= 3) return `${parts[0]}, ${parts[2]}, ${parts[1]}`
+  if (parts.length === 2) return `${parts[0]}, ${parts[1]}`
+  return p.name || 'Unknown'
+}
 
 export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider }) {
   const [tab, setTab] = useState('info')
