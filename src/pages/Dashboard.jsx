@@ -13,6 +13,7 @@ import Prospects from './Prospects'
 import Tests from './Tests'
 import Training from './Training'
 import ApproveAccounts from './ApproveAccounts'
+import DashboardHome from './DashboardHome'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
