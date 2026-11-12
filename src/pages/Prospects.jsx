@@ -114,7 +114,7 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
                 </td>
                 <td>{reps.find(r => r.id === c.rep_id)?.full_name || '—'}</td>
                 <td>
-                  {c.needs_approval || c.status === 'pending' ? (
+                  {c.status === 'pending' ? (
                     <span style={{ color: '#f59e0b' }}>Pending Approval</span>
                   ) : (
                     <button className="btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => handleReadyToOrder(c)}>
