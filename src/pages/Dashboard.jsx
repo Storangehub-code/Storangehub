@@ -105,25 +105,13 @@ export default function Dashboard({ session }) {
 
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} />}
         {selectedClinic && (
-          <div>
-            <button className="btn secondary" style={{ marginBottom: 16 }} onClick={() => setSelectedClinic(null)}>← Back to Accounts</button>
-            <div className="card">
-              <h2 style={{ marginBottom: 8 }}>{selectedClinic.name}</h2>
-              <p style={{ color: '#9ca3af' }}>{selectedClinic.address}, {selectedClinic.city}, {selectedClinic.state} {selectedClinic.zip}</p>
-              <p style={{ color: '#9ca3af' }}>{selectedClinic.phone}</p>
-              <div style={{ marginTop: 16 }}>
-                <button className="btn" style={{ marginRight: 8 }} onClick={() => window.open('https://www.responsedx.net/request-supplies', '_blank')}>Order Supplies</button>
-                <button className="btn secondary" onClick={() => window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')}>Request Pickup</button>
-              </div>
-              <h3 style={{ marginTop: 24, marginBottom: 12 }}>Providers</h3>
-              {providers.filter(p => p.clinic_id === selectedClinic.id).map(p => (
-                <div key={p.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer' }} onClick={() => setSelectedProvider(p)}>
-                  <span style={{ color: '#14b8a6' }}>{p.name}</span>
-                  <span style={{ color: '#6b7280', marginLeft: 8 }}>{p.title || ''}</span>
-                </div>
-              ))}
-            </div>
-          </div>
+          <ClinicDetail
+            clinic={selectedClinic}
+            providers={providers}
+            tests={tests}
+            onBack={() => setSelectedClinic(null)}
+            onSelectProvider={setSelectedProvider}
+          />
         )}
         {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
