@@ -27,7 +27,7 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
     setSaving(true)
     const { error } = await supabase.from('clinics').insert({
       name: form.name,
-      clinic_type: form.type,
+      type: form.type,
       city: form.city || null,
       state: form.state || null,
       address: form.address || null,
@@ -81,7 +81,7 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
             {filtered.map(c => (
               <tr key={c.id} onClick={() => onSelect && onSelect(c)} style={{ cursor: 'pointer' }}>
                 <td style={{ color: '#14b8a6' }}>{c.name}</td>
-                <td>{c.clinic_type || c.type || '—'}</td>
+                <td>{c.type || '—'}</td>
                 <td>{c.city || '—'}</td>
                 <td><span className="badge" style={{ background: c.stage === 'HOT' ? '#ef4444' : c.stage === 'Warm' ? '#f59e0b' : '#6b7280' }}>{c.stage || 'Cold'}</span></td>
                 <td>{reps.find(r => r.id === c.rep_id)?.full_name || '—'}</td>
