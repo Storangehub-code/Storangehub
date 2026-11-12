@@ -5,7 +5,11 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
   const pending = clinics.filter(c => c.status === 'pending' || c.needs_approval)
 
   async function approve(id) {
-    await supabase.from('clinics').update({ status: 'approved', needs_approval: false }).eq('id', id)
+    await supabase.from('clinics').update({ 
+      status: 'approved', 
+      needs_approval: false,
+      is_prospect: false 
+    }).eq('id', id)
     if (onRefresh) onRefresh()
   }
 

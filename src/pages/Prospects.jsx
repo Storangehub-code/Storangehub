@@ -49,6 +49,23 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
     }
   }
 
+  const handleReadyToOrder = async (clinic) => {
+    const { error } = await supabase.from('clinics').update({ 
+      needs_approval: true, 
+      status: 'pending' 
+    }).eq('id', clinic.id)
+    if (error) {
+      alert('Error: ' + error.message)
+    } else {
+      if (onRefresh) onRefresh()
+    }
+  }
+
+  const handleStageChange = async (clinic, newStage) => {
+    await supabase.from('clinics').update({ stage: newStage }).eq('id', clinic.id)
+    if (onRefresh) onRefresh()
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
@@ -75,16 +92,36 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
               <th>City</th>
               <th>Stage</th>
               <th>Rep</th>
+              <th>Actions</th>
             </tr>
           </thead>
           <tbody>
             {filtered.map(c => (
-              <tr key={c.id} onClick={() => onSelect && onSelect(c)} style={{ cursor: 'pointer' }}>
-                <td style={{ color: '#14b8a6' }}>{c.name}</td>
+              <tr key={c.id}>
+                <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelect && onSelect(c)}>{c.name}</td>
                 <td>{c.type || '—'}</td>
                 <td>{c.city || '—'}</td>
-                <td><span className="badge" style={{ background: c.stage === 'HOT' ? '#ef4444' : c.stage === 'Warm' ? '#f59e0b' : '#6b7280' }}>{c.stage || 'Cold'}</span></td>
+                <td>
+                  <select 
+                    value={c.stage || 'Cold'} 
+                    onChange={e => handleStageChange(c, e.target.value)}
+                    style={{ background: c.stage === 'HOT' ? '#ef4444' : c.stage === 'Warm' ? '#f59e0b' : '#6b7280', color: 'white', border: 'none', borderRadius: 4, padding: '2px 8px' }}
+                  >
+                    <option>Cold</option>
+                    <option>Warm</option>
+                    <option>HOT</option>
+                  </select>
+                </td>
                 <td>{reps.find(r => r.id === c.rep_id)?.full_name || '—'}</td>
+                <td>
+                  {c.needs_approval || c.status === 'pending' ? (
+                    <span style={{ color: '#f59e0b' }}>Pending Approval</span>
+                  ) : (
+                    <button className="btn" style={{ fontSize: 12, padding: '4px 12px' }} onClick={() => handleReadyToOrder(c)}>
+                      Ready to Order
+                    </button>
+                  )}
+                </td>
               </tr>
             ))}
           </tbody>
