@@ -115,7 +115,7 @@ export default function Dashboard({ session }) {
         {page === 'users' && role === 'global_admin' && <Users />}
         {page === 'master' && isMaster && <MasterLog />}
         
-        {page === 'dashboard' && <div className="card"><p>Dashboard home — ready to rebuild KPIs and charts</p></div>}
+        {page === 'dashboard' && <DashboardHome clinics={clinics} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} setPage={setPage} />}
       </div>
     </div>
   )
