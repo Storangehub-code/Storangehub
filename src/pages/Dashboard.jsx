@@ -104,7 +104,7 @@ export default function Dashboard({ session }) {
           </div>
         </div>
 
-        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} />}
+        {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} onAddProspect={() => setPage('prospects')} />}
         {selectedClinic && !selectedProvider && (
           <ClinicDetail
             clinic={selectedClinic}
@@ -122,7 +122,7 @@ export default function Dashboard({ session }) {
             onBack={() => setSelectedProvider(null)}
           />
         )}
-        {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
+        {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} currentUser={session.user} onRefresh={loadData} />}
         {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'providers' && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} selectedReps={selectedReps} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} />}

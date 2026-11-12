@@ -1,11 +1,13 @@
 import { useState } from 'react'
 
-export default function Accounts({ clinics = [], tests = [], onSelect, selectedReps = [], reps = [], role }) {
+export default function Accounts({ clinics = [], tests = [], onSelect, selectedReps = [], reps = [], role, onAddProspect }) {
   const [search, setSearch] = useState('')
   const [sort, setSort] = useState('az')
   const [showAdd, setShowAdd] = useState(false)
   const [routeMode, setRouteMode] = useState(false)
   const [selectedForRoute, setSelectedForRoute] = useState([])
+
+  const isGlobal = role === 'global_admin'
 
   let filtered = clinics.filter(c => !c.is_prospect)
   if (selectedReps.length > 0) {
@@ -56,10 +58,20 @@ export default function Accounts({ clinics = [], tests = [], onSelect, selectedR
     setSelectedForRoute([])
   }
 
+  const handleAddClick = () => {
+    if (isGlobal) {
+      setShowAdd(true)
+    } else {
+      if (onAddProspect) onAddProspect()
+    }
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 12, marginBottom: 16, alignItems: 'center', flexWrap: 'wrap' }}>
-        <button className="btn" onClick={() => setShowAdd(true)}>+ Add Account</button>
+        <button className="btn" onClick={handleAddClick}>
+          {isGlobal ? '+ Add Account' : '+ Add Prospect'}
+        </button>
         <button className="btn secondary" onClick={() => setRouteMode(!routeMode)}>{routeMode ? 'Cancel Route' : 'Build Route'}</button>
         {routeMode && selectedForRoute.length > 0 && (
           <button className="btn" onClick={buildRoute}>Make Route ({selectedForRoute.length})</button>
@@ -110,7 +122,7 @@ export default function Accounts({ clinics = [], tests = [], onSelect, selectedR
       </div>
       {!filtered.length && <p style={{ color: '#6b7280', marginTop: 16 }}>No accounts found.</p>}
 
-      {showAdd && (
+      {showAdd && isGlobal && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div className="card" style={{ width: 480, maxHeight: '80vh', overflow: 'auto' }}>
             <h3 style={{ marginBottom: 16 }}>Add Account</h3>
