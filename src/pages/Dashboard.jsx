@@ -14,6 +14,7 @@ import Tests from './Tests'
 import Training from './Training'
 import ApproveAccounts from './ApproveAccounts'
 import DashboardHome from './DashboardHome'
+import ClinicDetail from './ClinicDetail'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
