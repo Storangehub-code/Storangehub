@@ -9,6 +9,10 @@ import Accounts from './Accounts'
 import Providers from './Providers'
 import Expenses from './Expenses'
 import Reports from './Reports'
+import Prospects from './Prospects'
+import Tests from './Tests'
+import Training from './Training'
+import ApproveAccounts from './ApproveAccounts'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -98,19 +102,20 @@ export default function Dashboard({ session }) {
         </div>
 
         {page === 'accounts' && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} />}
+        {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} />}
+        {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
         {page === 'providers' && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} selectedReps={selectedReps} />}
+        {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={setSelectedClinic} onSelectProvider={setSelectedProvider} selectedReps={selectedReps} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} session={session} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} selectedReps={selectedReps} />}
         {page === 'followups' && <Followups clinics={clinics} session={session} />}
+        {page === 'training' && <Training role={role} />}
         {page === 'reps' && <Reps selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} />}
         {page === 'managers' && <Managers />}
         {page === 'users' && role === 'global_admin' && <Users />}
         {page === 'master' && isMaster && <MasterLog />}
         
-        {page === 'dashboard' && <div className="card"><p>Dashboard home — KPIs and charts coming</p></div>}
-        {page === 'prospects' && <div className="card"><p>Prospects page — coming soon</p></div>}
-        {page === 'tests' && <div className="card"><p>Tests page — coming soon</p></div>}
-        {page === 'training' && <div className="card"><p>Training page — coming soon</p></div>}
+        {page === 'dashboard' && <div className="card"><p>Dashboard home — ready to rebuild KPIs and charts</p></div>}
       </div>
     </div>
   )
