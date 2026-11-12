@@ -51,7 +51,6 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
 
   const handleReadyToOrder = async (clinic) => {
     const { error } = await supabase.from('clinics').update({ 
-      needs_approval: true, 
       status: 'pending' 
     }).eq('id', clinic.id)
     if (error) {
