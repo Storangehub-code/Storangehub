@@ -8,6 +8,7 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
   const [ordering, setOrdering] = useState(null)
   const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [] })
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', address: '', phone: '', email: '', fax: '', stage: 'Cold', emr: '' })
+  const [providers, setProviders] = useState([{ first: '', last: '', title: '', npi: '' }])
   const [saving, setSaving] = useState(false)
 
   let filtered = clinics.filter(c => c.is_prospect)
@@ -21,13 +22,29 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
     filtered = filtered.filter(c => (c.stage || 'Cold') === stageFilter)
   }
 
+  const addProviderRow = () => {
+    setProviders([...providers, { first: '', last: '', title: '', npi: '' }])
+  }
+
+  const removeProviderRow = (index) => {
+    if (providers.length > 1) {
+      setProviders(providers.filter((_, i) => i !== index))
+    }
+  }
+
+  const updateProvider = (index, field, value) => {
+    const updated = [...providers]
+    updated[index][field] = value
+    setProviders(updated)
+  }
+
   const handleAdd = async () => {
     if (!form.name) {
       alert('Clinic name is required')
       return
     }
     setSaving(true)
-    const { error } = await supabase.from('clinics').insert({
+    const { data: clinicData, error } = await supabase.from('clinics').insert({
       name: form.name,
       type: form.type,
       city: form.city || null,
@@ -40,15 +57,32 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
       emr: form.emr || null,
       is_prospect: true,
       rep_id: currentUser?.id || null
-    })
-    setSaving(false)
+    }).select().single()
+
     if (error) {
+      setSaving(false)
       alert('Error: ' + error.message)
-    } else {
-      setShowAdd(false)
-      setForm({ name: '', type: 'Orthopedic', city: '', state: '', address: '', phone: '', email: '', fax: '', stage: 'Cold', emr: '' })
-      if (onRefresh) onRefresh()
+      return
     }
+
+    const validProviders = providers.filter(p => p.last && p.title && p.npi)
+    if (validProviders.length > 0 && clinicData) {
+      for (const p of validProviders) {
+        const name = `${p.last}, ${p.title},${p.first}`
+        await supabase.from('providers').insert({
+          clinic_id: clinicData.id,
+          name,
+          title: p.title,
+          npi: p.npi
+        })
+      }
+    }
+
+    setSaving(false)
+    setShowAdd(false)
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', address: '', phone: '', email: '', fax: '', stage: 'Cold', emr: '' })
+    setProviders([{ first: '', last: '', title: '', npi: '' }])
+    if (onRefresh) onRefresh()
   }
 
   const handleStageChange = async (clinic, newStage) => {
@@ -57,7 +91,9 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
   }
 
   const submitOrder = async () => {
-    const orderData = JSON.stringify(supplies)
+    const { data: clinicProviders } = await supabase.from('providers').select('*').eq('clinic_id', ordering.id)
+    
+    const orderData = JSON.stringify({ supplies, providers: clinicProviders || [] })
     await supabase.from('clinics').update({ stage: 'Pending', order_details: orderData }).eq('id', ordering.id)
     
     const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
@@ -72,11 +108,23 @@ export default function Prospects({ clinics = [], onSelect, selectedReps = [], r
       }
     }
     
+    let providerList = 'None listed'
+    if (clinicProviders && clinicProviders.length > 0) {
+      providerList = clinicProviders.map(p => {
+        const parts = (p.name || '').split(',')
+        return `${parts[2] || ''} ${parts[0] || ''} (${parts[1] || p.title || ''}) - NPI: ${p.npi || 'N/A'}`
+      }).join('\n')
+    }
+    
     const orderDetails = `
 Clinic: ${ordering.name}
 Type: ${ordering.type || 'N/A'}
 City: ${ordering.city || 'N/A'}
 Phone: ${ordering.phone || 'N/A'}
+Address: ${ordering.address || 'N/A'}
+
+Providers:
+${providerList}
 
 Supplies Requested:
 - Requisitions: ${supplies.reqs}
@@ -110,7 +158,7 @@ Supplies Requested:
   if (ordering) {
     return (
       <div className="card">
-        <h3 style={{ marginBottom: 16 }}>Ready to Order: {ordering.name}</h3>
+        <h3 style={{ marginBottom: 16 }}>Ready to Order: ${ordering.name}</h3>
         <div style={{ marginBottom: 12 }}>
           <label>Requisitions with kits?</label>
           <select value={supplies.reqs} onChange={e => setSupplies({...supplies, reqs: e.target.value})} style={{ marginLeft: 8 }}>
@@ -123,30 +171,26 @@ Supplies Requested:
           <div><label>RDX RPP</label><input type="number" min="0" max="25" value={supplies.rpp} onChange={e => setSupplies({...supplies, rpp: e.target.value})} /></div>
           <div><label>RDX SynoviFact</label><input type="number" min="0" max="25" value={supplies.synovi} onChange={e => setSupplies({...supplies, synovi: e.target.value})} /></div>
         </div>
-        <div style={{ marginBottom: 12 }}>
-          <label>Return Shipping Labels</label>
-          <select value={supplies.labels} onChange={e => setSupplies({...supplies, labels: e.target.value})} style={{ marginLeft: 8 }}>
-            <option>FedEx</option><option>UPS</option>
-          </select>
-          <input type="number" min="0" max="25" value={supplies.labelQty} onChange={e => setSupplies({...supplies, labelQty: e.target.value})} placeholder="Qty" style={{ marginLeft: 8, width: 80 }} />
+        <div style={{ display: 'flex', gap: 10, marginBottom: 12 }}>
+          <div style={{ flex: 1 }}>
+            <label>Return Shipping</label>
+            <select value={supplies.labels} onChange={e => setSupplies({...supplies, labels: e.target.value})}>
+              <option>FedEx</option><option>UPS</option>
+            </select>
+          </div>
+          <div style={{ flex: 1 }}>
+            <label>Label Qty</label>
+            <input type="number" min="0" max="25" value={supplies.labelQty} onChange={e => setSupplies({...supplies, labelQty: e.target.value})} />
+          </div>
+          <div style={{ flex: 1 }}>
+            <label>Bags</label>
+            <input type="number" min="0" max="25" value={supplies.bags} onChange={e => setSupplies({...supplies, bags: e.target.value})} />
+          </div>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label>Return Shipping Bags</label>
-          <input type="number" min="0" max="25" value={supplies.bags} onChange={e => setSupplies({...supplies, bags: e.target.value})} style={{ marginLeft: 8, width: 80 }} />
+        <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+          <button className="btn" onClick={submitOrder}>Submit Order</button>
+          <button className="btn secondary" onClick={() => setOrdering(null)}>Cancel</button>
         </div>
-        <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8 }}>Results Sent</label>
-          {['Fax', 'Portal', 'Encrypted Email'].map(opt => (
-            <label key={opt} style={{ marginRight: 16 }}>
-              <input type="checkbox" checked={supplies.results.includes(opt)} onChange={e => {
-                const results = e.target.checked ? [...supplies.results, opt] : supplies.results.filter(r => r !== opt)
-                setSupplies({...supplies, results})
-              }} /> {opt}
-            </label>
-          ))}
-        </div>
-        <button className="btn" onClick={submitOrder}>Submit Order</button>
-        <button className="btn secondary" onClick={() => setOrdering(null)} style={{ marginLeft: 8 }}>Cancel</button>
       </div>
     )
   }
@@ -217,7 +261,7 @@ Supplies Requested:
 
       {showAdd && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: 480, maxHeight: '80vh', overflow: 'auto' }}>
+          <div className="card" style={{ width: 520, maxHeight: '85vh', overflow: 'auto' }}>
             <h3 style={{ marginBottom: 16 }}>Add Prospect</h3>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
               <input placeholder="Clinic Name *" value={form.name} onChange={e => setForm({...form, name: e.target.value})} />
@@ -243,10 +287,28 @@ Supplies Requested:
                 <option>Warm</option>
                 <option>HOT</option>
               </select>
+
+              <div style={{ marginTop: 12, borderTop: '1px solid #1f2937', paddingTop: 12 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
+                  <strong>Providers</strong>
+                  <button type="button" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={addProviderRow}>+ Add</button>
+                </div>
+                {providers.map((p, i) => (
+                  <div key={i} style={{ display: 'flex', gap: 6, marginBottom: 8, alignItems: 'center' }}>
+                    <input placeholder="First" value={p.first} onChange={e => updateProvider(i, 'first', e.target.value)} style={{ flex: 1 }} />
+                    <input placeholder="Last *" value={p.last} onChange={e => updateProvider(i, 'last', e.target.value)} style={{ flex: 1 }} />
+                    <input placeholder="Title *" value={p.title} onChange={e => updateProvider(i, 'title', e.target.value)} style={{ width: 70 }} />
+                    <input placeholder="NPI *" value={p.npi} onChange={e => updateProvider(i, 'npi', e.target.value)} style={{ flex: 1 }} />
+                    {providers.length > 1 && (
+                      <button type="button" className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => removeProviderRow(i)}>−</button>
+                    )}
+                  </div>
+                ))}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button className="btn" onClick={handleAdd} disabled={saving}>{saving ? 'Saving...' : 'Save Prospect'}</button>
-              <button className="btn secondary" onClick={() => setShowAdd(false)}>Cancel</button>
+              <button className="btn secondary" onClick={() => { setShowAdd(false); setProviders([{ first: '', last: '', title: '', npi: '' }]) }}>Cancel</button>
             </div>
           </div>
         </div>
