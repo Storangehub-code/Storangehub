@@ -7,7 +7,7 @@ function formatName(p) {
   return p.name || 'Unknown'
 }
 
-export default function ProviderDetail({ provider, tests = [], clinics = [], onBack }) {
+export default function ProviderDetail({ provider, tests = [], clinics = [], onBack, onSelectClinic }) {
   const [tab, setTab] = useState('info')
   const clinic = clinics.find(c => c.id === provider.clinic_id)
   const providerTests = tests.filter(t => t.provider_id === provider.id)
@@ -39,7 +39,10 @@ export default function ProviderDetail({ provider, tests = [], clinics = [], onB
               <p><strong>Phone:</strong> {provider.phone || '—'}</p>
             </div>
             <div>
-              <p><strong>Clinic:</strong> {clinic?.name || '—'}</p>
+              <p><strong>Clinic:</strong> <span 
+                style={{ color: '#14b8a6', cursor: 'pointer' }} 
+                onClick={() => onSelectClinic && clinic && onSelectClinic(clinic)}
+              >{clinic?.name || '—'}</span></p>
               <p><strong>Total Tests:</strong> {providerTests.length}</p>
             </div>
           </div>

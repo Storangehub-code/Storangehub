@@ -120,6 +120,7 @@ export default function Dashboard({ session }) {
             tests={tests}
             clinics={clinics}
             onBack={() => setSelectedProvider(null)}
+            onSelectClinic={(c) => { setSelectedProvider(null); setSelectedClinic(c); setPage('accounts') }}
           />
         )}
         {page === 'prospects' && <Prospects clinics={clinics} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} currentUser={session.user} onRefresh={loadData} />}
