@@ -8,6 +8,17 @@ function formatName(name) {
   return name
 }
 
+function downloadCSV(data, filename) {
+  const csv = data.map(row => row.map(cell => `"${(cell || '').toString().replace(/"/g, '""')}"`).join(',')).join('\n')
+  const blob = new Blob([csv], { type: 'text/csv' })
+  const url = URL.createObjectURL(blob)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
 export default function Reports({ clinics = [], tests = [], providers = [], selectedReps = [] }) {
   const [report, setReport] = useState('volume')
   const [activeAccountsPage, setActiveAccountsPage] = useState(0)
@@ -27,7 +38,6 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
     filteredProviders = providers.filter(p => clinicIds.includes(p.clinic_id))
   }
 
-  // Monthly volume
   const months = ['Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov']
   const monthMap = { Apr: '04', May: '05', Jun: '06', Jul: '07', Aug: '08', Sep: '09', Oct: '10', Nov: '11' }
   const monthlyCounts = {}
@@ -42,14 +52,12 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
   })
   const maxCount = Math.max(...Object.values(monthlyCounts), 1)
 
-  // Test types
   const typeCounts = {}
   filteredTests.forEach(t => {
     const type = t.test_type || 'Unknown'
     typeCounts[type] = (typeCounts[type] || 0) + 1
   })
 
-  // Active/Inactive logic (30 days)
   const thirtyDaysAgo = new Date()
   thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30)
   const thirtyDaysAgoStr = thirtyDaysAgo.toISOString().split('T')[0]
@@ -77,11 +85,34 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
   const pagedInactiveAccounts = inactiveAccounts.slice(inactiveAccountsPage * perPage, (inactiveAccountsPage + 1) * perPage)
   const pagedInactiveProviders = inactiveProviders.slice(inactiveProvidersPage * perPage, (inactiveProvidersPage + 1) * perPage)
 
+  function exportVolume() {
+    const data = [['Month', 'Tests'], ...months.map(m => [m, monthlyCounts[m]])]
+    downloadCSV(data, 'monthly-volume.csv')
+  }
+
+  function exportTypes() {
+    const data = [['Test Type', 'Count'], ...Object.entries(typeCounts).sort((a, b) => b[1] - a[1])]
+    downloadCSV(data, 'test-types.csv')
+  }
+
+  function exportAccounts(list, filename) {
+    const data = [['Clinic', 'City', 'Last Test'], ...list.map(c => [c.name, c.city || '', clinicLastTest[c.id] || 'Never'])]
+    downloadCSV(data, filename)
+  }
+
+  function exportProviders(list, filename) {
+    const data = [['Provider', 'Clinic', 'Last Test'], ...list.map(p => [formatName(p.name), clinics.find(c => c.id === p.clinic_id)?.name || '', providerLastTest[p.id] || 'Never'])]
+    downloadCSV(data, filename)
+  }
+
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16, alignItems: 'center' }}>
         <button className={report === 'volume' ? 'btn' : 'btn secondary'} onClick={() => setReport('volume')}>Monthly Volume</button>
         <button className={report === 'types' ? 'btn' : 'btn secondary'} onClick={() => setReport('types')}>By Test Type</button>
+        <div style={{ flex: 1 }}></div>
+        {report === 'volume' && <button className="btn secondary" onClick={exportVolume}>Export CSV</button>}
+        {report === 'types' && <button className="btn secondary" onClick={exportTypes}>Export CSV</button>}
       </div>
 
       {report === 'volume' && (
@@ -116,7 +147,10 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
 
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <div className="card">
-          <h3 style={{ marginBottom: 4 }}>Active Accounts</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <h3>Active Accounts</h3>
+            <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => exportAccounts(activeAccounts, 'active-accounts.csv')}>Export</button>
+          </div>
           <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 12 }}>At least one provider sent in last 30 days</p>
           {pagedActiveAccounts.map(c => (
             <div key={c.id} style={{ padding: '6px 0', color: '#14b8a6' }}>{c.name}</div>
@@ -132,7 +166,10 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
         </div>
 
         <div className="card">
-          <h3 style={{ marginBottom: 4 }}>Active Providers</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <h3>Active Providers</h3>
+            <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => exportProviders(activeProviders, 'active-providers.csv')}>Export</button>
+          </div>
           <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 12 }}>Sent in last 30 days</p>
           {pagedActiveProviders.map(p => (
             <div key={p.id} style={{ padding: '6px 0', color: '#14b8a6' }}>{formatName(p.name)}</div>
@@ -148,7 +185,10 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
         </div>
 
         <div className="card">
-          <h3 style={{ marginBottom: 4 }}>Accounts Gone Inactive</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <h3>Accounts Gone Inactive</h3>
+            <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => exportAccounts(inactiveAccounts, 'inactive-accounts.csv')}>Export</button>
+          </div>
           <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 12 }}>No tests in last 30 days</p>
           {pagedInactiveAccounts.map(c => (
             <div key={c.id} style={{ padding: '6px 0', color: '#14b8a6' }}>{c.name}</div>
@@ -164,7 +204,10 @@ export default function Reports({ clinics = [], tests = [], providers = [], sele
         </div>
 
         <div className="card">
-          <h3 style={{ marginBottom: 4 }}>Providers Gone Inactive</h3>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
+            <h3>Providers Gone Inactive</h3>
+            <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => exportProviders(inactiveProviders, 'inactive-providers.csv')}>Export</button>
+          </div>
           <p style={{ color: '#6b7280', fontSize: 12, marginBottom: 12 }}>No tests in last 30 days</p>
           {pagedInactiveProviders.map(p => (
             <div key={p.id} style={{ padding: '6px 0', color: '#14b8a6' }}>{formatName(p.name)}</div>
