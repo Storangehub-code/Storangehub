@@ -1,5 +1,13 @@
 import { useState } from 'react'
 
+function formatName(name) {
+  if (!name) return '—'
+  const parts = name.split(',').map(s => s.trim())
+  if (parts.length >= 3) return `${parts[0]}, ${parts[2]}, ${parts[1]}`
+  if (parts.length === 2) return `${parts[0]}, ${parts[1]}`
+  return name
+}
+
 export default function Tests({ tests = [], clinics = [], providers = [], onSelectClinic, onSelectProvider, selectedReps = [] }) {
   const [search, setSearch] = useState('')
   const [page, setPage] = useState(0)
@@ -54,7 +62,7 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
                   {clinics.find(c => c.id === t.clinic_id)?.name || '—'}
                 </td>
                 <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectProvider && providers.find(p => p.id === t.provider_id) && onSelectProvider(providers.find(p => p.id === t.provider_id))}>
-                  {providers.find(p => p.id === t.provider_id)?.name || t.provider_name || '—'}
+                  {providers.find(p => p.id === t.provider_id)?.name ? formatName(providers.find(p => p.id === t.provider_id).name) : (t.provider_name ? formatName(t.provider_name) : '—')}
                 </td>
               </tr>
             ))}
