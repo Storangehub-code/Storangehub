@@ -14,12 +14,6 @@ function formatName(name) {
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-function pageFromHash() {
-  const raw = (window.location.hash || '').replace(/^#\/?/, '')
-  const id = raw.split('/')[0]
-  return id || 'dashboard'
-}
-
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
   const [clinics, setClinics] = useState([])
@@ -29,36 +23,11 @@ export default function Dashboard({ session }) {
   const [followups, setFollowups] = useState([])
   const [tests, setTests] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [page, setPageState] = useState(pageFromHash)
+  const [page, setPage] = useState('dashboard')
   const [selectedClinic, setSelectedClinic] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [selectedReps, setSelectedReps] = useState([])
   const [reps, setReps] = useState([])
-
-  function setPage(next) {
-    setPageState(next)
-    const nextHash = '#/' + next
-    if (window.location.hash !== nextHash) {
-      window.history.pushState({ page: next }, '', nextHash)
-    }
-  }
-
-  useEffect(() => {
-    if (!window.location.hash) {
-      window.history.replaceState({ page: 'dashboard' }, '', '#/dashboard')
-    }
-    const sync = () => {
-      setPageState(pageFromHash())
-      setSelectedClinic(null)
-      setSelectedProvider(null)
-    }
-    window.addEventListener('hashchange', sync)
-    window.addEventListener('popstate', sync)
-    return () => {
-      window.removeEventListener('hashchange', sync)
-      window.removeEventListener('popstate', sync)
-    }
-  }, [])
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) loadData() }, [profile])
@@ -79,9 +48,17 @@ export default function Dashboard({ session }) {
     setProviders(p.data || [])
     setExpenses(e.data || [])
     setTests(testData.data || [])
-    const { data: repsData } = await supabase.from('profiles').select('*').eq('role', 'rep')
-    setReps(repsData || [])
-    if (profile?.role === 'rep') setSelectedReps([session.user.id])
+    const { data: allProfiles } = await supabase.from('profiles').select('*')
+    const repsData = (allProfiles || []).filter(r => r.role === 'rep')
+    setReps(repsData)
+    if (profile?.role === 'rep') {
+      setSelectedReps([session.user.id])
+    } else if (profile?.role === 'manager') {
+      const team = repsData.filter(r => r.manager_id === session.user.id).map(r => r.id)
+      setSelectedReps(team.length ? team : [session.user.id])
+    } else {
+      setSelectedReps([])
+    }
   }
 
   async function logActivity(action, details) {
@@ -308,38 +285,41 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <table style={{ fontSize: 13 }}>
             <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Provider</th><th>Practice</th></tr></thead>
             <tbody>
-              {(tests || []).sort((a, b) => new Date(b.collected_at || b.collected || 0) - new Date(a.collected_at || a.collected || 0)).slice(testPage * 10, (testPage + 1) * 10).map(t => (
+              {(filteredTests || []).sort((a, b) => new Date(b.collected_at || b.collected || 0) - new Date(a.collected_at || a.collected || 0)).slice(testPage * 10, (testPage + 1) * 10).map(t => {
+                const provider = providers.find(pr => pr.id === t.provider_id) || providers.find(pr => pr.npi && pr.npi === t.npi)
+                const clinic = clinics.find(cl => cl.id === t.clinic_id) || clinics.find(cl => (cl.name || '').toLowerCase() === (t.clinic_name || '').toLowerCase())
+                return (
                 <tr key={t.id}>
                   <td>{t.accession}</td>
                   <td>{formatDate(t.collected_at || t.collected || t.collected_date)}</td>
                   <td style={{ color: '#14b8a6' }}>{t.test_type || t.panel || '—'}</td>
-                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const p = providers.find(pr => pr.id === t.provider_id); if (p) { onSelectProvider(p); setPage('providers') } }}>{formatName(providers.find(p => p.id === t.provider_id)?.name) || '—'}</td>
-                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c) { onSelectClinic(c); setPage('accounts') } }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: provider ? 'pointer' : 'default' }} onClick={() => { if (provider) { onSelectProvider(provider); setPage('providers') } }}>{formatName(provider?.name || t.provider_name) || '—'}</td>
+                  <td style={{ color: '#14b8a6', cursor: clinic ? 'pointer' : 'default' }} onClick={() => { if (clinic) { onSelectClinic(clinic); setPage('accounts') } }}>{clinic?.name || t.clinic_name || '—'}</td>
                 </tr>
-              ))}
+              )})}
             </tbody>
           </table>
-          {!(tests || []).length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
-          {(tests || []).length > 10 && (
+          {!(filteredTests || []).length && <p style={{ color: '#6b7280' }}>No tests yet</p>}
+          {(filteredTests || []).length > 10 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setTestPage(Math.max(0, testPage - 1))} disabled={testPage === 0}>←</button>
-              <span style={{ padding: '4px 8px' }}>{testPage * 10 + 1}-{Math.min((testPage + 1) * 10, tests.length)}</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => setTestPage(testPage + 1)} disabled={(testPage + 1) * 10 >= tests.length}>→</button>
+              <span style={{ padding: '4px 8px' }}>{testPage * 10 + 1}-{Math.min((testPage + 1) * 10, filteredTests.length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setTestPage(testPage + 1)} disabled={(testPage + 1) * 10 >= filteredTests.length}>→</button>
             </div>
           )}
         </div>
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Accounts Needing Attention</h3>
-          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).slice(attentionPage * 10, (attentionPage + 1) * 10).map(c => (
+          {filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).slice(attentionPage * 10, (attentionPage + 1) * 10).map(c => (
             <div key={c.id} style={{ padding: '8px 0', borderBottom: '1px solid #1f2937', display: 'flex', justifyContent: 'space-between', cursor: 'pointer' }} onClick={() => { onSelectClinic(c); setPage('accounts') }}>
               <span style={{ color: '#14b8a6' }}>{c.name}</span><span style={{ color: '#ef4444' }}>30+</span>
             </div>
           ))}
-          {clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length > 10 && (
+          {filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).length > 10 && (
             <div style={{ display: 'flex', justifyContent: 'flex-end', gap: 8, marginTop: 12 }}>
               <button className="btn btn-secondary btn-sm" onClick={() => setAttentionPage(Math.max(0, attentionPage - 1))} disabled={attentionPage === 0}>←</button>
-              <span style={{ padding: '4px 8px' }}>{attentionPage * 10 + 1}-{Math.min((attentionPage + 1) * 10, clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length)}</span>
-              <button className="btn btn-secondary btn-sm" onClick={() => setAttentionPage(attentionPage + 1)} disabled={(attentionPage + 1) * 10 >= clinics.filter(c => !(tests || []).some(t => t.clinic_id === c.id)).length}>→</button>
+              <span style={{ padding: '4px 8px' }}>{attentionPage * 10 + 1}-{Math.min((attentionPage + 1) * 10, filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).length)}</span>
+              <button className="btn btn-secondary btn-sm" onClick={() => setAttentionPage(attentionPage + 1)} disabled={(attentionPage + 1) * 10 >= filteredClinics.filter(c => !(filteredTests || []).some(t => t.clinic_id === c.id)).length}>→</button>
             </div>
           )}
         </div>
@@ -357,7 +337,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Manager Performance</h3>
           {(() => {
-            const managerTests = tests.filter(t => {
+            const managerTests = (filteredTests || []).filter(t => {
               const clinic = clinics.find(c => c.id === t.clinic_id)
               const rep = reps.find(r => r.id === clinic?.rep_id)
               return rep?.manager_id
@@ -381,7 +361,7 @@ function DashboardHome({ clinics, expenses, providers, tests, selectedReps, reps
           <h3 style={{ marginBottom: 12 }}>Rep Performance</h3>
           {(() => {
             const byRep = {}
-            tests.forEach(t => {
+            ;(filteredTests || []).forEach(t => {
               const clinic = clinics.find(c => c.id === t.clinic_id)
               const rep = reps.find(r => r.id === clinic?.rep_id)
               if (rep) byRep[rep.full_name] = (byRep[rep.full_name] || 0) + 1
@@ -503,7 +483,7 @@ function ApproveAccounts({ clinics, onRefresh }) {
 
 function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [], userId }) {
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold', office_contact: '' })
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const [ordering, setOrdering] = useState(null)
   const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
@@ -521,7 +501,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
         }
       }
     }
-    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold', office_contact: '' })
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
     setProviders([{ name: '', title: 'MD', npi: '' }])
     setShowAdd(false)
     onRefresh()
@@ -621,9 +601,8 @@ Results Sent:
 ${resultLines}
     `
 
-    let emailNote = 'Email did not send.'
     try {
-      const res = await fetch('/.netlify/functions/sendemail', {
+      await fetch('/.netlify/functions/sendemail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -632,12 +611,9 @@ ${resultLines}
           text: orderDetails
         })
       })
-      const data = await res.json().catch(() => ({}))
-      if (data.id) emailNote = 'Email sent to cs@responsedx.net.'
-      else emailNote = 'Email failed: ' + (data.message || data.error || JSON.stringify(data))
-    } catch (e) { emailNote = 'Email failed: ' + (e.message || 'could not reach the email function') }
+    } catch (e) { console.log('Email error', e) }
     
-    alert('Order submitted! Pending Global Admin approval.\n\n' + emailNote)
+    alert('Order submitted! Pending Global Admin approval.')
     setOrdering(null)
     setSupplies({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
     onRefresh()
@@ -736,7 +712,7 @@ ${resultLines}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
             </select>
             <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" style={{ gridColumn: 'span 2' }} />
             <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
@@ -744,7 +720,6 @@ ${resultLines}
             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
             <input value={form.fax} onChange={e => setForm({...form, fax: e.target.value})} placeholder="Fax" />
             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
-            <input value={form.office_contact} onChange={e => setForm({...form, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={form.emr} onChange={e => setForm({...form, emr: e.target.value})} placeholder="EMR system" />
             <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
               <option>Cold</option><option>Warm</option><option>HOT</option>
@@ -824,7 +799,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
   const [routeAccounts, setRouteAccounts] = useState([])
   const [routeStart, setRouteStart] = useState('home')
   const [customStart, setCustomStart] = useState('')
-  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', zip: '', phone: '', email: '', address: '', fax: '', emr: '', office_contact: '' })
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
   const baseClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
   const filtered = [...baseClinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
     if (accountSort === 'az') return (a.name || '').localeCompare(b.name || '')
@@ -841,7 +816,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
     if (!form.name.trim()) return
     await supabase.from('clinics').insert(form)
     setShowAdd(false)
-    setForm({ name: '', type: 'Orthopedic', city: '', state: '', zip: '', phone: '', email: '', address: '', fax: '', emr: '', office_contact: '' })
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
     onRefresh()
   }
 
@@ -876,16 +851,14 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
             </select>
             <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" style={{ gridColumn: 'span 2' }} />
             <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
             <input value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" />
-            <input value={form.zip} onChange={e => setForm({...form, zip: e.target.value})} placeholder="Zip" />
             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
             <input value={form.fax} onChange={e => setForm({...form, fax: e.target.value})} placeholder="Fax" />
             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
-            <input value={form.office_contact} onChange={e => setForm({...form, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={form.emr} onChange={e => setForm({...form, emr: e.target.value})} placeholder="EMR system" />
           </div>
           <button className="btn" onClick={addClinic}>Save Account</button>
@@ -923,8 +896,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
               <span className="badge" style={{ background: (tests || []).some(t => testBelongsToClinic(t, c)) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => testBelongsToClinic(t, c)) ? 'Active' : 'Inactive'}</span>
             </div>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
-            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{[c.city, c.state, c.zip].filter(Boolean).join(', ') || '—'}</p>
-            {c.office_contact && <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.office_contact}</p>}
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{formatPhone(c.phone)}</p>
           </div>
         ))}
@@ -981,13 +953,11 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={editForm.name || ''} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
             <select value={editForm.type || ''} onChange={e => setEditForm({...editForm, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
             </select>
             <input value={editForm.address || ''} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" style={{ gridColumn: 'span 2' }} />
             <input value={editForm.city || ''} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
             <input value={editForm.state || ''} onChange={e => setEditForm({...editForm, state: e.target.value})} placeholder="State" />
-            <input value={editForm.zip || ''} onChange={e => setEditForm({...editForm, zip: e.target.value})} placeholder="Zip" />
-            <input value={editForm.office_contact || ''} onChange={e => setEditForm({...editForm, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={editForm.phone || ''} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Phone" />
             <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
             <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
@@ -1039,8 +1009,7 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
               if (data?.signedUrl) window.open(data.signedUrl, '_blank')
             }}>View PDF</button> : '—'}</p>
             <p><strong>Address:</strong> {clinic.address || '—'}</p>
-            <p><strong>City:</strong> {[clinic.city, clinic.state, clinic.zip].filter(Boolean).join(', ') || '—'}</p>
-            <p><strong>Office contact:</strong> {clinic.office_contact || '—'}</p>
+            {!clinic.address?.includes(clinic.city) && <p><strong>City:</strong> {clinic.city || '—'}</p>}
             <p><strong>Phone:</strong> {String(clinic.phone || '').replace('.0', '') || '—'}</p>
             <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
             <p style={{ gridColumn: 'span 2' }}><strong>Email:</strong> {clinic.email || '—'}</p>
@@ -1830,7 +1799,7 @@ function Followups({ clinics }) {
           {days.map((d, i) => {
             const dayFollowups = d ? followups.filter(f => new Date(f.date).getDate() === d) : []
             return (
-              <div key={i} onClick={() => d && setViewingDay(d)} style={{ padding: 8, borderRadius: 4, cursor: d ? 'pointer' : 'default', background: dayFollowups.length ? '#1e3a3a' : 'transparent', position: 'relative' }}>
+              <div key={i} onClick={() => d && setViewingDay(d)} style={{ minHeight: 80, padding: 8, borderRadius: 6, cursor: d ? 'pointer' : 'default', background: d ? (dayFollowups.length ? '#1e3a3a' : '#111827') : 'transparent', border: d ? '1px solid #1f2937' : 'none', position: 'relative' }}>
                 {d || ''}
                 {dayFollowups.length > 0 && <span style={{ position: 'absolute', top: 2, right: 4, fontSize: 10, color: '#14b8a6' }}>{dayFollowups.length}</span>}
               </div>
