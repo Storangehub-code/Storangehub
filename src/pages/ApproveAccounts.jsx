@@ -5,6 +5,9 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
   const [reviewing, setReviewing] = useState(null)
   const [providers, setProviders] = useState([])
   const [orderDetails, setOrderDetails] = useState(null)
+  const [showReject, setShowReject] = useState(false)
+  const [rejectNote, setRejectNote] = useState('')
+
   const pending = clinics.filter(c => c.stage === 'Pending' && c.is_prospect)
 
   useEffect(() => { if (reviewing) loadDetails(reviewing) }, [reviewing])
@@ -23,9 +26,19 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
     if (onRefresh) onRefresh()
   }
 
-  async function reject(id) {
-    if (!confirm('Reject this account?')) return
-    await supabase.from('clinics').update({ stage: 'Rejected' }).eq('id', id)
+  async function reject() {
+    if (!rejectNote.trim()) return alert('Please enter a reason for rejection')
+    await supabase.from('clinics').update({ stage: 'Rejected', reject_note: rejectNote }).eq('id', reviewing.id)
+    if (reviewing.rep_id) {
+      await supabase.from('notifications').insert({
+        user_id: reviewing.rep_id,
+        message: `Order rejected for ${reviewing.name}: ${rejectNote}`,
+        type: 'order_rejected',
+        clinic_id: reviewing.id
+      })
+    }
+    setShowReject(false)
+    setRejectNote('')
     setReviewing(null)
     if (onRefresh) onRefresh()
   }
@@ -56,6 +69,7 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
         </table>
         {!pending.length && <p style={{ color: '#6b7280', padding: 16 }}>No accounts pending approval.</p>}
       </div>
+
       {reviewing && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
           <div className="card" style={{ width: 560, maxHeight: '85vh', overflow: 'auto' }}>
@@ -99,11 +113,22 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
                 {orderDetails.supplies.results.includes('Encrypted Email') && <p><strong>Encrypted Email:</strong> {orderDetails.supplies.encFirst} {orderDetails.supplies.encLast} ({orderDetails.supplies.encEmail})</p>}
               </div>
             )}
-            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button className="btn" onClick={() => approve(reviewing.id)}>Approve</button>
-              <button className="btn secondary" onClick={() => reject(reviewing.id)}>Reject</button>
-              <button className="btn secondary" onClick={() => setReviewing(null)}>Close</button>
-            </div>
+
+            {showReject ? (
+              <div style={{ marginTop: 16 }}>
+                <textarea placeholder="Reason for rejection (required)..." value={rejectNote} onChange={e => setRejectNote(e.target.value)} style={{ width: '100%', minHeight: 80, marginBottom: 8 }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn" style={{ background: '#ef4444' }} onClick={reject}>Confirm Reject</button>
+                  <button className="btn secondary" onClick={() => { setShowReject(false); setRejectNote('') }}>Cancel</button>
+                </div>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+                <button className="btn" onClick={() => approve(reviewing.id)}>Approve</button>
+                <button className="btn secondary" onClick={() => setShowReject(true)}>Reject</button>
+                <button className="btn secondary" onClick={() => setReviewing(null)}>Close</button>
+              </div>
+            )}
           </div>
         </div>
       )}
