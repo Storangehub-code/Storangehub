@@ -173,7 +173,7 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
                   <td>{t.accession || '—'}</td>
                   <td>{t.collected_at || t.collected || '—'}</td>
                   <td>{t.test_type || '—'}</td>
-                  <td style={{ color: '#14b8a6' }}>{formatName(t.provider_name) || '—'}</td>
+                  <td style={{ color: '#14b8a6' }}>{providers.find(p => p.id === t.provider_id)?.name ? formatName(providers.find(p => p.id === t.provider_id).name) : (formatName(t.provider_name) || "—")}</td>
                   <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => { const c = clinics.find(cl => cl.id === t.clinic_id); if (c && onSelectClinic) onSelectClinic(c); }}>{clinics.find(c => c.id === t.clinic_id)?.name || '—'}</td>
                 </tr>
               ))}
