@@ -10,15 +10,45 @@ export default async (req) => {
     return new Response(JSON.stringify({ error: 'Invalid JSON' }), { status: 400 })
   }
 
-  const { email, full_name, phone, home_address, role, manager_id } = body
-  if (!email || !full_name || !role) {
-    return new Response(JSON.stringify({ error: 'email, full_name, and role are required' }), { status: 400 })
-  }
-
+  const { id, email, full_name, phone, home_address, role, manager_id } = body
   const url = process.env.SUPABASE_URL
   const key = process.env.SUPABASE_SERVICE_ROLE_KEY
   if (!url || !key) {
     return new Response(JSON.stringify({ error: 'Missing Supabase service config' }), { status: 500 })
+  }
+
+  // Update existing profile
+  if (id) {
+    const updateRes = await fetch(url + '/rest/v1/profiles?id=eq.' + id, {
+      method: 'PATCH',
+      headers: {
+        'Authorization': 'Bearer ' + key,
+        'apikey': key,
+        'Content-Type': 'application/json',
+        'Prefer': 'return=representation'
+      },
+      body: JSON.stringify({
+        full_name,
+        email,
+        phone: phone || null,
+        home_address: home_address || null,
+        role,
+        manager_id: manager_id || null
+      })
+    })
+    if (!updateRes.ok) {
+      const err = await updateRes.text()
+      return new Response(JSON.stringify({ error: err }), { status: 500 })
+    }
+    return new Response(JSON.stringify({ ok: true, id }), {
+      status: 200,
+      headers: { 'Content-Type': 'application/json' }
+    })
+  }
+
+  // Create new user
+  if (!email || !full_name || !role) {
+    return new Response(JSON.stringify({ error: 'email, full_name, and role are required' }), { status: 400 })
   }
 
   const createRes = await fetch(url + '/auth/v1/admin/users', {
