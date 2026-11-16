@@ -590,8 +590,9 @@ Results Sent:
 ${resultLines}
     `
 
+    let emailNote = 'Email did not send.'
     try {
-      await fetch('/.netlify/functions/sendemail', {
+      const res = await fetch('/.netlify/functions/sendemail', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -600,9 +601,12 @@ ${resultLines}
           text: orderDetails
         })
       })
-    } catch (e) { console.log('Email error', e) }
+      const data = await res.json().catch(() => ({}))
+      if (data.id) emailNote = 'Email sent to cs@responsedx.net.'
+      else emailNote = 'Email failed: ' + (data.message || data.error || JSON.stringify(data))
+    } catch (e) { emailNote = 'Email failed: ' + (e.message || 'could not reach the email function') }
     
-    alert('Order submitted! Pending Global Admin approval.')
+    alert('Order submitted! Pending Global Admin approval.\n\n' + emailNote)
     setOrdering(null)
     setSupplies({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
     onRefresh()
