@@ -422,7 +422,11 @@ function ApproveAccounts({ clinics, onRefresh }) {
             <div><span style={{ color: '#9ca3af' }}>SynoviFact:</span> {order.synovi || 0}</div>
             <div><span style={{ color: '#9ca3af' }}>Shipping:</span> {order.labels || '—'} x{order.labelQty || 0}</div>
             <div><span style={{ color: '#9ca3af' }}>Bags:</span> {order.bags || 0}</div>
-            <div><span style={{ color: '#9ca3af' }}>Results:</span> {(order.results || []).join(', ') || '—'}</div>
+            <div><span style={{ color: '#9ca3af' }}>First shipment:</span> {order.firstShipment === 'rep' ? 'To Rep' : order.firstShipment === 'other' ? ('Other: ' + (order.otherAddress || '')) : 'To Clinic'}</div>
+            <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#9ca3af' }}>Results:</span> {(order.results || []).join(', ') || '—'}</div>
+            {order.faxNumber && <div><span style={{ color: '#9ca3af' }}>Results fax:</span> {order.faxNumber}</div>}
+            {(order.portalFirst || order.portalEmail) && <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#9ca3af' }}>Portal:</span> {order.portalFirst} {order.portalLast} {order.portalEmail}</div>}
+            {(order.encFirst || order.encEmail) && <div style={{ gridColumn: 'span 2' }}><span style={{ color: '#9ca3af' }}>Encrypted email:</span> {order.encFirst} {order.encLast} {order.encEmail}</div>}
           </div>
         </div>
         <div style={{ marginBottom: 12 }}>
@@ -471,7 +475,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
   const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const [ordering, setOrdering] = useState(null)
-  const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [] })
+  const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
   const allProspects = clinics.filter(c => c.is_prospect)
   const prospects = selectedReps?.length > 0 ? allProspects.filter(c => selectedReps.includes(c.rep_id)) : allProspects
 
@@ -516,7 +520,16 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
       labels: supplies.labels,
       labelQty: supplies.labelQty,
       bags: supplies.bags,
-      results: supplies.results
+      results: supplies.results,
+      firstShipment: supplies.firstShipment,
+      otherAddress: supplies.otherAddress,
+      faxNumber: supplies.faxNumber,
+      portalFirst: supplies.portalFirst,
+      portalLast: supplies.portalLast,
+      portalEmail: supplies.portalEmail,
+      encFirst: supplies.encFirst,
+      encLast: supplies.encLast,
+      encEmail: supplies.encEmail
     }
     await supabase.from('clinics').update({ stage: 'Pending', order_details: orderData }).eq('id', ordering.id)
     
@@ -537,6 +550,13 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
     const repName = reps.find(r => r.id === ordering.rep_id)?.full_name || 'Unknown'
     const providerLines = (provs || []).filter(p => p.name).map(p => `- ${p.name}, ${p.title || ''}  NPI: ${p.npi || 'N/A'}`).join('\n') || '- None listed'
 
+    const shipment = supplies.firstShipment === 'rep' ? 'To Rep' : supplies.firstShipment === 'other' ? ('Other: ' + (supplies.otherAddress || 'N/A')) : 'To Clinic'
+    const resultLines = [
+      supplies.results.includes('Fax') ? '- Fax: ' + (supplies.faxNumber || 'N/A') : '',
+      supplies.results.includes('Portal') ? '- Portal: ' + [supplies.portalFirst, supplies.portalLast].filter(Boolean).join(' ') + (supplies.portalEmail ? ' (' + supplies.portalEmail + ')' : '') : '',
+      supplies.results.includes('Encrypted Email') ? '- Encrypted Email: ' + [supplies.encFirst, supplies.encLast].filter(Boolean).join(' ') + (supplies.encEmail ? ' (' + supplies.encEmail + ')' : '') : ''
+    ].filter(Boolean).join('\n') || '- None'
+
     const orderDetails = `
 NEW ACCOUNT + SUPPLY ORDER
 
@@ -555,6 +575,8 @@ Rep: ${repName}
 Providers:
 ${providerLines}
 
+First Shipment: ${shipment}
+
 Supplies Requested:
 - Requisitions: ${supplies.reqs}
 - Wound kits: ${supplies.wound}
@@ -563,7 +585,9 @@ Supplies Requested:
 - SynoviFact: ${supplies.synovi}
 - Shipping: ${supplies.labels} x${supplies.labelQty}
 - Bags: ${supplies.bags}
-- Results: ${(supplies.results || []).join(', ') || 'None'}
+
+Results Sent:
+${resultLines}
     `
 
     try {
@@ -580,6 +604,7 @@ Supplies Requested:
     
     alert('Order submitted! Pending Global Admin approval.')
     setOrdering(null)
+    setSupplies({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
     onRefresh()
   }
 
@@ -610,16 +635,55 @@ Supplies Requested:
           <label>Return Shipping Bags</label>
           <input type="number" min="0" max="25" value={supplies.bags} onChange={e => setSupplies({...supplies, bags: e.target.value})} style={{ marginLeft: 8, width: 80 }} />
         </div>
+        <div style={{ marginBottom: 16, borderTop: '1px solid #1f2937', paddingTop: 12 }}>
+          <label style={{ fontWeight: 600 }}>Where to ship the first order</label>
+          <select value={supplies.firstShipment} onChange={e => setSupplies({...supplies, firstShipment: e.target.value})} style={{ marginLeft: 8 }}>
+            <option value="clinic">To Clinic</option>
+            <option value="rep">To Rep</option>
+            <option value="other">Other Location</option>
+          </select>
+          {supplies.firstShipment === 'other' && (
+            <input placeholder="Ship-to address" value={supplies.otherAddress} onChange={e => setSupplies({...supplies, otherAddress: e.target.value})} style={{ marginTop: 8, width: '100%' }} />
+          )}
+        </div>
         <div style={{ marginBottom: 16 }}>
-          <label style={{ display: 'block', marginBottom: 8 }}>Results Sent</label>
-          {['Fax', 'Portal', 'Encrypted Email'].map(opt => (
-            <label key={opt} style={{ marginRight: 16 }}>
-              <input type="checkbox" checked={supplies.results.includes(opt)} onChange={e => {
-                const results = e.target.checked ? [...supplies.results, opt] : supplies.results.filter(r => r !== opt)
-                setSupplies({...supplies, results})
-              }} /> {opt}
-            </label>
-          ))}
+          <label style={{ display: 'block', marginBottom: 8, fontWeight: 600 }}>Results Sent</label>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <input type="checkbox" checked={supplies.results.includes('Fax')} onChange={() => {
+              const results = supplies.results.includes('Fax') ? supplies.results.filter(r => r !== 'Fax') : [...supplies.results, 'Fax']
+              setSupplies({...supplies, results})
+            }} />
+            <span>Fax</span>
+            {supplies.results.includes('Fax') && <input placeholder="Fax number" value={supplies.faxNumber} onChange={e => setSupplies({...supplies, faxNumber: e.target.value})} style={{ width: 160 }} />}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8, flexWrap: 'wrap' }}>
+            <input type="checkbox" checked={supplies.results.includes('Portal')} onChange={() => {
+              const results = supplies.results.includes('Portal') ? supplies.results.filter(r => r !== 'Portal') : [...supplies.results, 'Portal']
+              setSupplies({...supplies, results})
+            }} />
+            <span>Portal</span>
+            {supplies.results.includes('Portal') && (
+              <>
+                <input placeholder="First" value={supplies.portalFirst} onChange={e => setSupplies({...supplies, portalFirst: e.target.value})} style={{ width: 110 }} />
+                <input placeholder="Last" value={supplies.portalLast} onChange={e => setSupplies({...supplies, portalLast: e.target.value})} style={{ width: 110 }} />
+                <input placeholder="Email" value={supplies.portalEmail} onChange={e => setSupplies({...supplies, portalEmail: e.target.value})} style={{ width: 200 }} />
+              </>
+            )}
+          </div>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
+            <input type="checkbox" checked={supplies.results.includes('Encrypted Email')} onChange={() => {
+              const results = supplies.results.includes('Encrypted Email') ? supplies.results.filter(r => r !== 'Encrypted Email') : [...supplies.results, 'Encrypted Email']
+              setSupplies({...supplies, results})
+            }} />
+            <span>Encrypted Email</span>
+            {supplies.results.includes('Encrypted Email') && (
+              <>
+                <input placeholder="First" value={supplies.encFirst} onChange={e => setSupplies({...supplies, encFirst: e.target.value})} style={{ width: 110 }} />
+                <input placeholder="Last" value={supplies.encLast} onChange={e => setSupplies({...supplies, encLast: e.target.value})} style={{ width: 110 }} />
+                <input placeholder="Email" value={supplies.encEmail} onChange={e => setSupplies({...supplies, encEmail: e.target.value})} style={{ width: 200 }} />
+              </>
+            )}
+          </div>
         </div>
         <button className="btn" onClick={submitOrder}>Submit Order</button>
         <button className="btn secondary" onClick={() => setOrdering(null)} style={{ marginLeft: 8 }}>Cancel</button>
