@@ -14,6 +14,12 @@ function formatName(name) {
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+function pageFromHash() {
+  const raw = (window.location.hash || '').replace(/^#\/?/, '')
+  const id = raw.split('/')[0]
+  return id || 'dashboard'
+}
+
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
   const [clinics, setClinics] = useState([])
@@ -23,11 +29,36 @@ export default function Dashboard({ session }) {
   const [followups, setFollowups] = useState([])
   const [tests, setTests] = useState([])
   const [notifications, setNotifications] = useState([])
-  const [page, setPage] = useState('dashboard')
+  const [page, setPageState] = useState(pageFromHash)
   const [selectedClinic, setSelectedClinic] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [selectedReps, setSelectedReps] = useState([])
   const [reps, setReps] = useState([])
+
+  function setPage(next) {
+    setPageState(next)
+    const nextHash = '#/' + next
+    if (window.location.hash !== nextHash) {
+      window.history.pushState({ page: next }, '', nextHash)
+    }
+  }
+
+  useEffect(() => {
+    if (!window.location.hash) {
+      window.history.replaceState({ page: 'dashboard' }, '', '#/dashboard')
+    }
+    const sync = () => {
+      setPageState(pageFromHash())
+      setSelectedClinic(null)
+      setSelectedProvider(null)
+    }
+    window.addEventListener('hashchange', sync)
+    window.addEventListener('popstate', sync)
+    return () => {
+      window.removeEventListener('hashchange', sync)
+      window.removeEventListener('popstate', sync)
+    }
+  }, [])
 
   useEffect(() => { loadProfile() }, [])
   useEffect(() => { if (profile) loadData() }, [profile])
