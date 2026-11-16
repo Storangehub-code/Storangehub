@@ -472,7 +472,7 @@ function ApproveAccounts({ clinics, onRefresh }) {
 
 function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [], userId }) {
   const [showAdd, setShowAdd] = useState(false)
-  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold', office_contact: '' })
   const [providers, setProviders] = useState([{ name: '', title: 'MD', npi: '' }])
   const [ordering, setOrdering] = useState(null)
   const [supplies, setSupplies] = useState({ reqs: 'yes', wound: 0, uti: 0, rpp: 0, synovi: 0, labels: 'FedEx', labelQty: 0, bags: 0, results: [], firstShipment: 'clinic', otherAddress: '', faxNumber: '', portalFirst: '', portalLast: '', portalEmail: '', encFirst: '', encLast: '', encEmail: '' })
@@ -490,7 +490,7 @@ function Prospects({ clinics, onRefresh, onSelect, selectedReps = [], reps = [],
         }
       }
     }
-    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold' })
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '', stage: 'Cold', office_contact: '' })
     setProviders([{ name: '', title: 'MD', npi: '' }])
     setShowAdd(false)
     onRefresh()
@@ -705,7 +705,7 @@ ${resultLines}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
             </select>
             <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" style={{ gridColumn: 'span 2' }} />
             <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
@@ -713,6 +713,7 @@ ${resultLines}
             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
             <input value={form.fax} onChange={e => setForm({...form, fax: e.target.value})} placeholder="Fax" />
             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
+            <input value={form.office_contact} onChange={e => setForm({...form, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={form.emr} onChange={e => setForm({...form, emr: e.target.value})} placeholder="EMR system" />
             <select value={form.stage} onChange={e => setForm({...form, stage: e.target.value})}>
               <option>Cold</option><option>Warm</option><option>HOT</option>
@@ -792,7 +793,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
   const [routeAccounts, setRouteAccounts] = useState([])
   const [routeStart, setRouteStart] = useState('home')
   const [customStart, setCustomStart] = useState('')
-  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
+  const [form, setForm] = useState({ name: '', type: 'Orthopedic', city: '', state: '', zip: '', phone: '', email: '', address: '', fax: '', emr: '', office_contact: '' })
   const baseClinics = selectedReps?.length > 0 ? clinics.filter(c => selectedReps.includes(c.rep_id)) : clinics
   const filtered = [...baseClinics].filter(c => c.name.toLowerCase().includes(search.toLowerCase())).sort((a, b) => {
     if (accountSort === 'az') return (a.name || '').localeCompare(b.name || '')
@@ -809,7 +810,7 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
     if (!form.name.trim()) return
     await supabase.from('clinics').insert(form)
     setShowAdd(false)
-    setForm({ name: '', type: 'Orthopedic', city: '', state: '', phone: '', email: '', address: '', fax: '', emr: '' })
+    setForm({ name: '', type: 'Orthopedic', city: '', state: '', zip: '', phone: '', email: '', address: '', fax: '', emr: '', office_contact: '' })
     onRefresh()
   }
 
@@ -844,14 +845,16 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={form.name} onChange={e => setForm({...form, name: e.target.value})} placeholder="Clinic name *" />
             <select value={form.type} onChange={e => setForm({...form, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
             </select>
             <input value={form.address} onChange={e => setForm({...form, address: e.target.value})} placeholder="Street address" style={{ gridColumn: 'span 2' }} />
             <input value={form.city} onChange={e => setForm({...form, city: e.target.value})} placeholder="City" />
             <input value={form.state} onChange={e => setForm({...form, state: e.target.value})} placeholder="State" />
+            <input value={form.zip} onChange={e => setForm({...form, zip: e.target.value})} placeholder="Zip" />
             <input value={form.phone} onChange={e => setForm({...form, phone: e.target.value})} placeholder="Phone" />
             <input value={form.fax} onChange={e => setForm({...form, fax: e.target.value})} placeholder="Fax" />
             <input value={form.email} onChange={e => setForm({...form, email: e.target.value})} placeholder="Email" />
+            <input value={form.office_contact} onChange={e => setForm({...form, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={form.emr} onChange={e => setForm({...form, emr: e.target.value})} placeholder="EMR system" />
           </div>
           <button className="btn" onClick={addClinic}>Save Account</button>
@@ -889,7 +892,8 @@ function Accounts({ clinics, tests, onRefresh, onSelect, selectedReps = [], reps
               <span className="badge" style={{ background: (tests || []).some(t => testBelongsToClinic(t, c)) ? '#a7f3d0' : '#fecaca', color: '#000' }}>{(tests || []).some(t => testBelongsToClinic(t, c)) ? 'Active' : 'Inactive'}</span>
             </div>
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.address || '—'}</p>
-            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.city || '—'}{c.state ? ', ' + c.state : ''}</p>
+            <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{[c.city, c.state, c.zip].filter(Boolean).join(', ') || '—'}</p>
+            {c.office_contact && <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{c.office_contact}</p>}
             <p style={{ color: '#9ca3af', fontSize: 13, margin: '4px 0' }}>{formatPhone(c.phone)}</p>
           </div>
         ))}
@@ -946,11 +950,13 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
             <input value={editForm.name || ''} onChange={e => setEditForm({...editForm, name: e.target.value})} placeholder="Name" />
             <select value={editForm.type || ''} onChange={e => setEditForm({...editForm, type: e.target.value})}>
-              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Multi-specialty</option>
+              <option>Orthopedic</option><option>Hospital</option><option>Wound Care</option><option>Podiatry</option><option>SNF</option><option>Urology</option><option>Dermatology</option><option>Multi-specialty</option>
             </select>
             <input value={editForm.address || ''} onChange={e => setEditForm({...editForm, address: e.target.value})} placeholder="Address" style={{ gridColumn: 'span 2' }} />
             <input value={editForm.city || ''} onChange={e => setEditForm({...editForm, city: e.target.value})} placeholder="City" />
             <input value={editForm.state || ''} onChange={e => setEditForm({...editForm, state: e.target.value})} placeholder="State" />
+            <input value={editForm.zip || ''} onChange={e => setEditForm({...editForm, zip: e.target.value})} placeholder="Zip" />
+            <input value={editForm.office_contact || ''} onChange={e => setEditForm({...editForm, office_contact: e.target.value})} placeholder="Office contact" />
             <input value={editForm.phone || ''} onChange={e => setEditForm({...editForm, phone: e.target.value})} placeholder="Phone" />
             <input value={editForm.fax || ''} onChange={e => setEditForm({...editForm, fax: e.target.value})} placeholder="Fax" />
             <input value={editForm.email || ''} onChange={e => setEditForm({...editForm, email: e.target.value})} placeholder="Email" />
@@ -1002,7 +1008,8 @@ function ClinicDetail({ clinic, providers, tests, onBack, onRefresh, onSelectPro
               if (data?.signedUrl) window.open(data.signedUrl, '_blank')
             }}>View PDF</button> : '—'}</p>
             <p><strong>Address:</strong> {clinic.address || '—'}</p>
-            {!clinic.address?.includes(clinic.city) && <p><strong>City:</strong> {clinic.city || '—'}</p>}
+            <p><strong>City:</strong> {[clinic.city, clinic.state, clinic.zip].filter(Boolean).join(', ') || '—'}</p>
+            <p><strong>Office contact:</strong> {clinic.office_contact || '—'}</p>
             <p><strong>Phone:</strong> {String(clinic.phone || '').replace('.0', '') || '—'}</p>
             <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
             <p style={{ gridColumn: 'span 2' }}><strong>Email:</strong> {clinic.email || '—'}</p>
