@@ -28,7 +28,7 @@ export default async (req) => {
         'Content-Type': 'application/json'
       },
       body: JSON.stringify({
-        from: 'Response DX <onboarding@resend.dev>',
+        from: 'Response DX <orders@mail.storangehub.com>',
         to,
         subject,
         text
