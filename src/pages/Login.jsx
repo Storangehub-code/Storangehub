@@ -20,12 +20,16 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 360, margin: '80px auto', padding: 24 }}>
-      <h1 style={{ marginBottom: 24 }}>Response DX CRM</h1>
+    <div style={{ maxWidth: 360, margin: '80px auto', padding: 24, textAlign: 'center' }}>
+      <img 
+        src="/logo.png" 
+        alt="Response DX" 
+        style={{ maxWidth: '100%', height: 'auto', marginBottom: 32, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} 
+      />
       <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 12 }} required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 12 }} required />
-        <button className="btn" type="submit" style={{ width: '100%' }}>{isSignUp ? 'Sign Up' : 'Log In'}</button>
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} required />
+        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} required />
+        <button className="btn" type="submit" style={{ width: '100%', padding: 12 }}>{isSignUp ? 'Sign Up' : 'Log In'}</button>
       </form>
       <p style={{ marginTop: 16, fontSize: 14 }}>
         <span style={{ cursor: 'pointer', color: '#14b8a6' }} onClick={() => setIsSignUp(!isSignUp)}>
