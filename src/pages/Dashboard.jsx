@@ -37,8 +37,6 @@ export default function Dashboard({ session }) {
     const fromHash = () => {
       const h = window.location.hash.replace('#/', '') || 'dashboard'
       setPage(h)
-      setSelectedClinic(null)
-      setSelectedProvider(null)
     }
     fromHash()
     window.addEventListener('hashchange', fromHash)
@@ -112,7 +110,7 @@ export default function Dashboard({ session }) {
           <span style={{ background: '#0d9488', color: 'white', padding: '2px 10px', borderRadius: 12, fontSize: 11, fontWeight: 600 }}>{roleLabel}</span>
         </div>
         {nav.map(n => (
-          <div key={n.id} onClick={() => { if (!n.disabled) go(n.id) }}
+          <div key={n.id} onClick={() => { if (!n.disabled) { setSelectedClinic(null); setSelectedProvider(null); go(n.id) } }}
             style={{ padding: '10px 16px', cursor: n.disabled ? 'not-allowed' : 'pointer', borderRadius: 8, marginBottom: 4, background: page === n.id && !selectedClinic ? '#0d9488' : 'transparent', fontSize: 14, color: n.disabled ? '#4b5563' : 'inherit' }}>
             {n.label}
           </div>
