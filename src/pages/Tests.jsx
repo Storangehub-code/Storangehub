@@ -1,5 +1,11 @@
 import { useState } from 'react'
 
+function formatDate(d) {
+  if (!d) return ''
+  const [y, m, day] = d.split('T')[0].split('-')
+  return `${m}-${day}-${y}`
+}
+
 function formatName(name) {
   if (!name) return '—'
   const parts = name.split(',').map(s => s.trim())
@@ -25,7 +31,8 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
     )
   }
 
-  const paged = filtered.slice(page * perPage, (page + 1) * perPage)
+  const sorted = [...filtered].sort((a, b) => (b.collected_at || b.collected || '').localeCompare(a.collected_at || a.collected || ''))
+  const paged = sorted.slice(page * perPage, (page + 1) * perPage)
   const totalPages = Math.ceil(filtered.length / perPage)
 
   return (
@@ -55,8 +62,8 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
             {paged.map(t => (
               <tr key={t.id}>
                 <td>{t.accession || '—'}</td>
-                <td>{t.collected_at || t.collected || '—'}</td>
-                <td>{t.finalized_at || t.finalized || '—'}</td>
+                <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
+                <td>{formatDate(t.finalized_at || t.finalized) || '—'}</td>
                 <td>{t.test_type || '—'}</td>
                 <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectClinic && clinics.find(c => c.id === t.clinic_id) && onSelectClinic(clinics.find(c => c.id === t.clinic_id))}>
                   {clinics.find(c => c.id === t.clinic_id)?.name || '—'}
