@@ -12,21 +12,23 @@ export default function Reps({ selected, setSelected, clinics = [], tests = [], 
     supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
   }, [])
 
-  async function createRep() {
-    if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
-    const full_name = form.first.trim() + ' ' + form.last.trim()
-    const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, manager_id: form.manager_id || null, role: 'rep' }
-    let error
-    if (editing) {
-      ({ error } = await supabase.from('profiles').update(payload).eq('id', editing))
-    } else {
-      ({ error } = await supabase.from('profiles').insert(payload))
-    }
-    if (error) return alert(error.message)
-    setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' })
-    setEditing(null)
-    supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
-  }
+async function createRep() {
+  if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
+  const full_name = form.first.trim() + ' ' + form.last.trim()
+  const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, manager_id: form.manager_id || null, role: 'rep' }
+  if (editing) payload.id = editing
+  const res = await fetch('/.netlify/functions/create-user', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  })
+  const data = await res.json()
+  if (!res.ok) return alert(data.error || 'Failed')
+  setForm({ first: '', last: '', phone: '', email: '', address: '', manager_id: '' })
+  setEditing(null)
+  supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
+}
+  
 
   function startEdit(r) {
     const parts = (r.full_name || '').split(' ')
