@@ -29,6 +29,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({})
+  const [reqFile, setReqFile] = useState(null)
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [newProvider, setNewProvider] = useState({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
   const [saving, setSaving] = useState(false)
@@ -159,10 +160,20 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
   async function saveClinicEdit() {
     if (!editForm.name) return alert('Name is required')
     setSaving(true)
-    const { error } = await supabase.from('clinics').update(editForm).eq('id', clinic.id)
+    let requisition = editForm.requisition
+    if (reqFile) {
+      const path = `requisitions/${clinic.id}-${Date.now()}-${reqFile.name}`
+      const { error: upErr } = await supabase.storage.from('docs').upload(path, reqFile, { upsert: true })
+      if (upErr) { setSaving(false); return alert('Upload failed: ' + upErr.message) }
+      const { data: urlData } = supabase.storage.from('docs').getPublicUrl(path)
+      requisition = urlData.publicUrl
+    }
+    const payload = { ...editForm, requisition }
+    const { error } = await supabase.from('clinics').update(payload).eq('id', clinic.id)
     setSaving(false)
     if (error) return alert(error.message)
     setShowEdit(false)
+    setReqFile(null)
     if (onRefresh) onRefresh()
   }
 
@@ -219,7 +230,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             <div>
               <p><strong>Type:</strong> {clinic.clinic_type || 'Clinic'}</p>
               <p><strong>Ordering URL:</strong> {clinic.ordering_url || '—'}</p>
-              <p><strong>Requisition:</strong> {clinic.requisition || '—'}</p>
+              <p><strong>Requisition:</strong> {clinic.requisition ? <a href={clinic.requisition} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a> : '—'}</p>
               <p><strong>City:</strong> {clinic.city || '—'}</p>
               <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
               <p><strong>Email:</strong> {clinic.email || '—'}</p>
@@ -390,7 +401,11 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
               <div style={{ gridColumn: '1 / -1' }}><label>Office Contact</label><input value={editForm.office_contact} onChange={e => setEditForm({...editForm, office_contact: e.target.value})} /></div>
               <div><label>Ordering URL</label><input value={editForm.ordering_url} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} /></div>
               <div><label>Supplies URL</label><input value={editForm.supplies_url} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} /></div>
-              <div style={{ gridColumn: '1 / -1' }}><label>Requisition</label><input value={editForm.requisition} onChange={e => setEditForm({...editForm, requisition: e.target.value})} /></div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label>Requisition (PDF)</label>
+                <input type="file" accept="application/pdf" onChange={e => setReqFile(e.target.files?.[0] || null)} />
+                {clinic.requisition && !reqFile && <div style={{ fontSize: 12, marginTop: 4 }}><a href={clinic.requisition} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>Current PDF</a></div>}
+              </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button className="btn" onClick={saveClinicEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
