@@ -28,6 +28,8 @@ function formatDate(d) {
 export default function ProviderDetail({ provider, tests = [], clinics = [], onBack, onSelectClinic }) {
   const [tab, setTab] = useState('info')
   const [saving, setSaving] = useState(false)
+  const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState({})
 
   const [activities, setActivities] = useState([])
   const [activityType, setActivityType] = useState('Meeting')
@@ -133,11 +135,40 @@ export default function ProviderDetail({ provider, tests = [], clinics = [], onB
     loadFollowups()
   }
 
+  function openEdit() {
+    const parts = (provider.name || '').split(',').map(s => s.trim())
+    setEditForm({
+      first: parts.length >= 3 ? parts[2] : (parts[1] || ''),
+      last: parts[0] || '',
+      title: provider.title || (parts.length >= 3 ? parts[1] : ''),
+      npi: provider.npi || '',
+      email: provider.email || '',
+      phone: provider.phone || ''
+    })
+    setShowEdit(true)
+  }
+
+  async function saveProviderEdit() {
+    if (!editForm.last || !editForm.title || !editForm.npi) return alert('Last name, title, and NPI are required')
+    setSaving(true)
+    const name = `${editForm.last}, ${editForm.title},${editForm.first}`
+    const { error } = await supabase.from('providers').update({
+      name,
+      title: editForm.title,
+      npi: editForm.npi,
+      email: editForm.email || null,
+      phone: editForm.phone || null
+    }).eq('id', provider.id)
+    setSaving(false)
+    if (error) return alert(error.message)
+    setShowEdit(false)
+  }
+
   return (
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
-        <button className="btn">Edit</button>
+        <button className="btn" onClick={openEdit}>Edit</button>
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
@@ -275,6 +306,26 @@ export default function ProviderDetail({ provider, tests = [], clinics = [], onB
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
               <button className="btn" onClick={saveFollowup} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
               <button className="btn secondary" onClick={() => { setShowFollowup(false); setEditingFollowup(null) }}>Cancel</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {showEdit && (
+        <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
+          <div className="card" style={{ width: 420 }}>
+            <h3 style={{ marginBottom: 16 }}>Edit Provider</h3>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+              <div><label>First</label><input value={editForm.first} onChange={e => setEditForm({...editForm, first: e.target.value})} /></div>
+              <div><label>Last *</label><input value={editForm.last} onChange={e => setEditForm({...editForm, last: e.target.value})} /></div>
+              <div><label>Title *</label><input value={editForm.title} onChange={e => setEditForm({...editForm, title: e.target.value})} /></div>
+              <div><label>NPI *</label><input value={editForm.npi} onChange={e => setEditForm({...editForm, npi: e.target.value})} /></div>
+              <div><label>Email</label><input value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></div>
+              <div><label>Phone</label><input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button className="btn" onClick={saveProviderEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+              <button className="btn secondary" onClick={() => setShowEdit(false)}>Cancel</button>
             </div>
           </div>
         </div>

@@ -28,6 +28,7 @@ function formatDate(d) {
 export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider, onRefresh }) {
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
+  const [editForm, setEditForm] = useState({})
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [newProvider, setNewProvider] = useState({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
   const [saving, setSaving] = useState(false)
@@ -135,6 +136,36 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
     loadFollowups()
   }
 
+  function openEdit() {
+    setEditForm({
+      name: clinic.name || '',
+      clinic_type: clinic.clinic_type || '',
+      address: clinic.address || '',
+      city: clinic.city || '',
+      state: clinic.state || '',
+      zip: clinic.zip || '',
+      phone: clinic.phone || '',
+      fax: clinic.fax || '',
+      email: clinic.email || '',
+      emr: clinic.emr || '',
+      office_contact: clinic.office_contact || '',
+      ordering_url: clinic.ordering_url || '',
+      supplies_url: clinic.supplies_url || '',
+      requisition: clinic.requisition || ''
+    })
+    setShowEdit(true)
+  }
+
+  async function saveClinicEdit() {
+    if (!editForm.name) return alert('Name is required')
+    setSaving(true)
+    const { error } = await supabase.from('clinics').update(editForm).eq('id', clinic.id)
+    setSaving(false)
+    if (error) return alert(error.message)
+    setShowEdit(false)
+    if (onRefresh) onRefresh()
+  }
+
   const handleAddProvider = async () => {
     if (!newProvider.last || !newProvider.title || !newProvider.npi) {
       alert('Last name, title, and NPI are required')
@@ -164,7 +195,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
     <div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
-        <button className="btn" onClick={() => setShowEdit(true)}>Edit</button>
+        <button className="btn" onClick={openEdit}>Edit</button>
         <button className="btn" onClick={() => window.open('https://www.responsedx.net/request-supplies', '_blank')}>Request Supplies</button>
         <button className="btn" onClick={() => window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')}>Request Pickup</button>
         <button className="btn" onClick={() => {
@@ -343,10 +374,28 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
 
       {showEdit && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: 480 }}>
+          <div className="card" style={{ width: 520, maxHeight: '90vh', overflow: 'auto' }}>
             <h3 style={{ marginBottom: 16 }}>Edit Account</h3>
-            <p style={{ color: '#9ca3af' }}>Edit form coming soon</p>
-            <button className="btn secondary" style={{ marginTop: 16 }} onClick={() => setShowEdit(false)}>Close</button>
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div style={{ gridColumn: '1 / -1' }}><label>Name *</label><input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
+              <div><label>Type</label><input value={editForm.clinic_type} onChange={e => setEditForm({...editForm, clinic_type: e.target.value})} /></div>
+              <div><label>EMR</label><input value={editForm.emr} onChange={e => setEditForm({...editForm, emr: e.target.value})} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Address</label><input value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} /></div>
+              <div><label>City</label><input value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} /></div>
+              <div><label>State</label><input value={editForm.state} onChange={e => setEditForm({...editForm, state: e.target.value})} /></div>
+              <div><label>Zip</label><input value={editForm.zip} onChange={e => setEditForm({...editForm, zip: e.target.value})} /></div>
+              <div><label>Phone</label><input value={editForm.phone} onChange={e => setEditForm({...editForm, phone: e.target.value})} /></div>
+              <div><label>Fax</label><input value={editForm.fax} onChange={e => setEditForm({...editForm, fax: e.target.value})} /></div>
+              <div><label>Email</label><input value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Office Contact</label><input value={editForm.office_contact} onChange={e => setEditForm({...editForm, office_contact: e.target.value})} /></div>
+              <div><label>Ordering URL</label><input value={editForm.ordering_url} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} /></div>
+              <div><label>Supplies URL</label><input value={editForm.supplies_url} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} /></div>
+              <div style={{ gridColumn: '1 / -1' }}><label>Requisition</label><input value={editForm.requisition} onChange={e => setEditForm({...editForm, requisition: e.target.value})} /></div>
+            </div>
+            <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
+              <button className="btn" onClick={saveClinicEdit} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
+              <button className="btn secondary" onClick={() => setShowEdit(false)}>Cancel</button>
+            </div>
           </div>
         </div>
       )}
