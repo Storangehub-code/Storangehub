@@ -1,6 +1,17 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
+function calendarLinks(f) {
+  const start = new Date(f.scheduled_at)
+  const end = new Date(start.getTime() + 30 * 60 * 1000)
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const title = encodeURIComponent(`${f.followup_type || 'Follow-up'} — ${f.clinics?.name || 'Clinic'}`)
+  const details = encodeURIComponent(f.notes || '')
+  const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}`
+  const outlook = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&body=${details}`
+  return { google, outlook }
+}
+
 export default function Followups({ clinics = [], session }) {
   const [followups, setFollowups] = useState([])
   const [currentDate, setCurrentDate] = useState(new Date())
@@ -150,7 +161,11 @@ export default function Followups({ clinics = [], session }) {
               <div style={{ fontSize: 13, color: '#9ca3af' }}>{f.followup_type} — {new Date(f.scheduled_at).toLocaleString()}</div>
               {f.notes && <div style={{ fontSize: 12, color: '#6b7280' }}>{f.notes}</div>}
             </div>
-            <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); deleteFollowup(f.id) }}>Delete</button>
+            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
+              <a href={calendarLinks(f).google} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={e => e.stopPropagation()}>Google</a>
+              <a href={calendarLinks(f).outlook} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={e => e.stopPropagation()}>Outlook</a>
+              <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={(e) => { e.stopPropagation(); deleteFollowup(f.id) }}>Delete</button>
+            </div>
           </div>
         ))}
         {!followups.filter(f => new Date(f.scheduled_at) >= new Date()).length && <p style={{ color: '#6b7280' }}>No upcoming follow-ups</p>}
@@ -166,6 +181,8 @@ export default function Followups({ clinics = [], session }) {
                 <div style={{ fontSize: 13 }}>{formatTime(f.scheduled_at)} — {f.followup_type}</div>
                 {f.notes && <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 4 }}>{f.notes}</div>}
                 <div style={{ display: 'flex', gap: 8, marginTop: 8 }}>
+                  <a href={calendarLinks(f).google} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }}>Google</a>
+                  <a href={calendarLinks(f).outlook} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }}>Outlook</a>
                   <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => { setViewingDay(null); editFollowup(f) }}>Edit</button>
                   <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => deleteFollowup(f.id)}>Delete</button>
                 </div>

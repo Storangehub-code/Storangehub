@@ -8,6 +8,17 @@ function formatName(p) {
   return p.name || 'Unknown'
 }
 
+function calendarLinks(f, clinicName) {
+  const start = new Date(f.scheduled_at)
+  const end = new Date(start.getTime() + 30 * 60 * 1000)
+  const fmt = (d) => d.toISOString().replace(/[-:]/g, '').split('.')[0] + 'Z'
+  const title = encodeURIComponent(`${f.followup_type || 'Follow-up'} — ${clinicName || 'Clinic'}`)
+  const details = encodeURIComponent(f.notes || '')
+  const google = `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${fmt(start)}/${fmt(end)}&details=${details}`
+  const outlook = `https://outlook.live.com/calendar/0/deeplink/compose?subject=${title}&startdt=${start.toISOString()}&enddt=${end.toISOString()}&body=${details}`
+  return { google, outlook }
+}
+
 function formatDate(d) {
   if (!d) return ''
   const [y, m, day] = d.split('T')[0].split('-')
@@ -226,7 +237,11 @@ export default function ProviderDetail({ provider, tests = [], clinics = [], onB
                   <div style={{ fontWeight: 500, color: '#14b8a6' }}>{f.followup_type} — {new Date(f.scheduled_at).toLocaleString()}</div>
                   <div style={{ fontSize: 13, color: '#9ca3af' }}>{f.notes || 'No notes'}</div>
                 </div>
-                <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => deleteFollowup(f.id)}>Delete</button>
+                <div style={{ display: 'flex', gap: 6 }}>
+                  <a href={calendarLinks(f, clinic?.name).google} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }}>Google</a>
+                  <a href={calendarLinks(f, clinic?.name).outlook} target="_blank" rel="noreferrer" className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }}>Outlook</a>
+                  <button className="btn secondary" style={{ padding: '4px 10px', fontSize: 12 }} onClick={() => deleteFollowup(f.id)}>Delete</button>
+                </div>
               </div>
             ))}
             {!followups.length && <p style={{ color: '#6b7280' }}>No follow-ups scheduled</p>}
