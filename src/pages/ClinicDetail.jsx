@@ -8,6 +8,12 @@ function formatProviderName(p) {
   return p.name || 'Unknown'
 }
 
+function formatDate(d) {
+  if (!d) return ''
+  const [y, m, day] = d.split('T')[0].split('-')
+  return `${m}-${day}-${y}`
+}
+
 export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider, onRefresh }) {
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
@@ -145,68 +151,59 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
 
   return (
     <div>
-      <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
+      <div style={{ display: 'flex', gap: 8, marginBottom: 16 }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
         <button className="btn" onClick={() => setShowEdit(true)}>Edit</button>
-        <button className="btn" onClick={() => window.open('https://www.responsedx.net/request-supplies', '_blank')}>Request Supplies</button>
-        <button className="btn" onClick={() => window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')}>Request Pickup</button>
-        <button className="btn" onClick={() => {
-          const addr = `${clinic.address || ''}, ${clinic.city || ''}, ${clinic.state || ''} ${clinic.zip || ''}`.trim()
-          window.open('https://www.google.com/maps/search/catering+near+' + encodeURIComponent(addr), '_blank')
-        }}>Find Catering</button>
-        <button className="btn secondary">Requisition Form ▾</button>
+        <a href="https://www.responsedx.net/request-supplies" target="_blank" rel="noreferrer" className="btn">Order Supplies</a>
+        <a href="https://www.responsedx.net/copy-of-request-an-account" target="_blank" rel="noreferrer" className="btn">Request Pickup</a>
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
         {['info', 'providers', 'activity', 'tests'].map(t => (
-          <button key={t} onClick={() => setTab(t)} className={`btn ${tab === t ? '' : 'secondary'}`} style={{ textTransform: 'capitalize' }}>
-            {t}
-          </button>
+          <button key={t} onClick={() => setTab(t)} className={`btn ${tab === t ? '' : 'secondary'}`} style={{ textTransform: 'capitalize' }}>{t}</button>
         ))}
       </div>
 
       {tab === 'info' && (
         <div className="card">
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+          <h2 style={{ marginBottom: 12 }}>{clinic.name}</h2>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 12 }}>
             <div>
-              <p><strong>Type:</strong> {clinic.clinic_type || 'Clinic'}</p>
-              <p><strong>Ordering URL:</strong> {clinic.ordering_url || '—'}</p>
-              <p><strong>Requisition:</strong> {clinic.requisition || '—'}</p>
-              <p><strong>City:</strong> {clinic.city || '—'}</p>
+              <p><strong>Type:</strong> {clinic.type || '—'}</p>
+              <p><strong>Address:</strong> {clinic.address || '—'}</p>
+              <p><strong>Phone:</strong> {clinic.phone || '—'}</p>
               <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
-              <p><strong>Email:</strong> {clinic.email || '—'}</p>
             </div>
             <div>
+              <p><strong>Email:</strong> {clinic.email || '—'}</p>
+              <p><strong>Office Contact:</strong> {clinic.office_contact || '—'}</p>
               <p><strong>EMR:</strong> {clinic.emr || '—'}</p>
-              <p><strong>Supplies URL:</strong> {clinic.supplies_url || '—'}</p>
-              <p><strong>Address:</strong> {clinic.address || '—'}, {clinic.city || ''}, {clinic.state || ''} {clinic.zip || ''}</p>
-              <p><strong>Phone:</strong> {clinic.phone || '—'}</p>
+              <p><strong>Total Tests:</strong> {clinicTests.length}</p>
             </div>
           </div>
-          {clinic.office_contact && (
-            <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid #1f2937' }}>
-              <strong>Office Contact:</strong> {clinic.office_contact}
-            </div>
-          )}
         </div>
       )}
 
       {tab === 'providers' && (
         <div className="card">
           <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-            <h3 style={{ margin: 0 }}>Providers ({clinicProviders.length})</h3>
+            <h3>Providers ({clinicProviders.length})</h3>
             <button className="btn" onClick={() => setShowAddProvider(true)}>+ Add Provider</button>
           </div>
-          {clinicProviders.map(p => (
-            <div key={p.id} onClick={() => onSelectProvider && onSelectProvider(p)} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937', cursor: 'pointer', display: 'flex', justifyContent: 'space-between' }}>
-              <div>
-                <div style={{ color: '#14b8a6', fontWeight: 500 }}>{formatProviderName(p)}</div>
-                <div style={{ fontSize: 12, color: '#6b7280' }}>{p.title || ''} {p.npi ? `• NPI: ${p.npi}` : ''}</div>
-              </div>
-              <div style={{ color: '#9ca3af', fontSize: 13 }}>{clinicTests.filter(t => t.provider_id === p.id).length} tests</div>
-            </div>
-          ))}
-          {!clinicProviders.length && <p style={{ color: '#6b7280' }}>No providers</p>}
+          <table>
+            <thead><tr><th>Name</th><th>Title</th><th>NPI</th><th>Tests</th></tr></thead>
+            <tbody>
+              {clinicProviders.map(p => (
+                <tr key={p.id} style={{ cursor: 'pointer' }} onClick={() => onSelectProvider && onSelectProvider(p)}>
+                  <td style={{ color: '#14b8a6' }}>{formatProviderName(p)}</td>
+                  <td>{p.title || '—'}</td>
+                  <td>{p.npi || '—'}</td>
+                  <td>{clinicTests.filter(t => t.provider_id === p.id).length}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+          {!clinicProviders.length && <p style={{ color: '#6b7280' }}>No providers yet.</p>}
         </div>
       )}
 
@@ -227,7 +224,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
               placeholder="Notes..."
               value={activityNotes}
               onChange={e => setActivityNotes(e.target.value)}
-              style={{ width: '100%', minHeight: 80, marginBottom: 8 }}
+              style={{ width: '100%', minHeight: 80 }}
             />
           </div>
 
@@ -275,10 +272,10 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
           <table style={{ fontSize: 13 }}>
             <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Provider</th></tr></thead>
             <tbody>
-              {clinicTests.slice(0, 25).map(t => (
+              {[...clinicTests].sort((a, b) => (b.collected_at || b.collected || '').localeCompare(a.collected_at || a.collected || '')).slice(0, 25).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession || '—'}</td>
-                  <td>{t.collected_at || t.collected || '—'}</td>
+                  <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
                   <td>{t.test_type || '—'}</td>
                   <td>{t.provider_name || '—'}</td>
                 </tr>
@@ -332,18 +329,18 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
 
       {showAddProvider && (
         <div style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.7)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 100 }}>
-          <div className="card" style={{ width: 420 }}>
+          <div className="card" style={{ width: 480 }}>
             <h3 style={{ marginBottom: 16 }}>Add Provider</h3>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-              <input placeholder="First Name" value={newProvider.first} onChange={e => setNewProvider({...newProvider, first: e.target.value})} />
-              <input placeholder="Last Name *" value={newProvider.last} onChange={e => setNewProvider({...newProvider, last: e.target.value})} />
-              <input placeholder="Title * (MD, PA, FNP, etc)" value={newProvider.title} onChange={e => setNewProvider({...newProvider, title: e.target.value})} />
-              <input placeholder="NPI *" value={newProvider.npi} onChange={e => setNewProvider({...newProvider, npi: e.target.value})} />
-              <input placeholder="Email" value={newProvider.email} onChange={e => setNewProvider({...newProvider, email: e.target.value})} />
-              <input placeholder="Phone" value={newProvider.phone} onChange={e => setNewProvider({...newProvider, phone: e.target.value})} />
+            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
+              <div><label>First</label><input value={newProvider.first} onChange={e => setNewProvider({...newProvider, first: e.target.value})} /></div>
+              <div><label>Last *</label><input value={newProvider.last} onChange={e => setNewProvider({...newProvider, last: e.target.value})} /></div>
+              <div><label>Title *</label><input value={newProvider.title} onChange={e => setNewProvider({...newProvider, title: e.target.value})} /></div>
+              <div><label>NPI *</label><input value={newProvider.npi} onChange={e => setNewProvider({...newProvider, npi: e.target.value})} /></div>
+              <div><label>Email</label><input value={newProvider.email} onChange={e => setNewProvider({...newProvider, email: e.target.value})} /></div>
+              <div><label>Phone</label><input value={newProvider.phone} onChange={e => setNewProvider({...newProvider, phone: e.target.value})} /></div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-              <button className="btn" onClick={handleAddProvider} disabled={saving}>{saving ? 'Saving...' : 'Add Provider'}</button>
+              <button className="btn" onClick={handleAddProvider} disabled={saving}>{saving ? 'Saving...' : 'Save'}</button>
               <button className="btn secondary" onClick={() => setShowAddProvider(false)}>Cancel</button>
             </div>
           </div>

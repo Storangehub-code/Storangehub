@@ -8,6 +8,12 @@ function formatName(p) {
   return p.name || 'Unknown'
 }
 
+function formatDate(d) {
+  if (!d) return ''
+  const [y, m, day] = d.split('T')[0].split('-')
+  return `${m}-${day}-${y}`
+}
+
 export default function ProviderDetail({ provider, tests = [], clinics = [], onBack, onSelectClinic }) {
   const [tab, setTab] = useState('info')
   const [saving, setSaving] = useState(false)
@@ -164,10 +170,10 @@ export default function ProviderDetail({ provider, tests = [], clinics = [], onB
           <table style={{ fontSize: 13 }}>
             <thead><tr><th>Accession</th><th>Collected</th><th>Test</th></tr></thead>
             <tbody>
-              {providerTests.slice(0, 25).map(t => (
+              {[...providerTests].sort((a, b) => (b.collected_at || b.collected || '').localeCompare(a.collected_at || a.collected || '')).slice(0, 25).map(t => (
                 <tr key={t.id}>
                   <td>{t.accession || '—'}</td>
-                  <td>{t.collected_at || t.collected || '—'}</td>
+                  <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
                   <td>{t.test_type || '—'}</td>
                 </tr>
               ))}
