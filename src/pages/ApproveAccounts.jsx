@@ -8,6 +8,7 @@ export default function ApproveAccounts({ clinics = [], reps = [], onRefresh }) 
   const [orderDetails, setOrderDetails] = useState(null)
   const [showReject, setShowReject] = useState(false)
   const [rejectNote, setRejectNote] = useState('')
+  const [clinicCode, setClinicCode] = useState('')
 
   const pending = clinics.filter(c => c.stage === 'Pending' && c.is_prospect)
 
@@ -22,13 +23,15 @@ export default function ApproveAccounts({ clinics = [], reps = [], onRefresh }) 
   }
 
   async function approve(id) {
+    if (!clinicCode.trim()) return alert('Clinic Code is required')
     const clinic = pending.find(c => c.id === id)
-    await supabase.from('clinics').update({ stage: 'Approved', is_prospect: false }).eq('id', id)
+    await supabase.from('clinics').update({ stage: 'Approved', is_prospect: false, clinic_code: clinicCode.trim() }).eq('id', id)
     if (clinic?.rep_id) {
       await notify([clinic.rep_id], `Account approved: ${clinic.name} is now live`, 'account_approved', id)
     }
     await sendEmail(GLOBAL_EMAIL, `Account Approved: ${clinic?.name || ''}`, `The account "${clinic?.name || ''}" has been approved and is now active.`)
     setReviewing(null)
+    setClinicCode('')
     if (onRefresh) onRefresh()
   }
 
@@ -133,10 +136,14 @@ export default function ApproveAccounts({ clinics = [], reps = [], onRefresh }) 
                 </div>
               </div>
             ) : (
-              <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
-                <button className="btn" onClick={() => approve(reviewing.id)}>Approve</button>
+              <div style={{ marginTop: 16 }}>
+                <label style={{ display: 'block', marginBottom: 6, fontWeight: 600 }}>Clinic Code (required)</label>
+                <input placeholder="e.g. LAN00075" value={clinicCode} onChange={e => setClinicCode(e.target.value)} style={{ width: '100%', marginBottom: 12, padding: 8 }} />
+                <div style={{ display: 'flex', gap: 8 }}>
+                  <button className="btn" onClick={() => approve(reviewing.id)}>Approve</button>
                 <button className="btn secondary" onClick={() => setShowReject(true)}>Reject</button>
-                <button className="btn secondary" onClick={() => setReviewing(null)}>Close</button>
+                <button className="btn secondary" onClick={() => { setReviewing(null); setClinicCode('') }}>Close</button>
+                </div>
               </div>
             )}
           </div>
