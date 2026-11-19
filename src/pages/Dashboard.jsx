@@ -103,6 +103,7 @@ export default function Dashboard({ session }) {
 
   return (
     <div style={{ display: 'flex', minHeight: '100vh' }}>
+      <PushRegister userId={session.user.id} />
       <div style={{ width: 220, background: '#111827', padding: '20px 12px', borderRight: '1px solid #1f2937' }}>
         <div style={{ padding: '0 12px', marginBottom: 8 }}>
           <img src="/logo.png" alt="Response DX" style={{ height: 40, marginBottom: 4 }} />
