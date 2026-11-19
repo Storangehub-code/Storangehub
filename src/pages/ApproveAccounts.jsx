@@ -1,7 +1,8 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { notify, sendEmail, GLOBAL_EMAIL } from '../lib/notify'
 
-export default function ApproveAccounts({ clinics = [], onRefresh }) {
+export default function ApproveAccounts({ clinics = [], reps = [], onRefresh }) {
   const [reviewing, setReviewing] = useState(null)
   const [providers, setProviders] = useState([])
   const [orderDetails, setOrderDetails] = useState(null)
@@ -21,7 +22,12 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
   }
 
   async function approve(id) {
+    const clinic = pending.find(c => c.id === id)
     await supabase.from('clinics').update({ stage: 'Approved', is_prospect: false }).eq('id', id)
+    if (clinic?.rep_id) {
+      await notify([clinic.rep_id], `Account approved: ${clinic.name} is now live`, 'account_approved', id)
+    }
+    await sendEmail(GLOBAL_EMAIL, `Account Approved: ${clinic?.name || ''}`, `The account "${clinic?.name || ''}" has been approved and is now active.`)
     setReviewing(null)
     if (onRefresh) onRefresh()
   }
@@ -54,17 +60,21 @@ export default function ApproveAccounts({ clinics = [], onRefresh }) {
       <h2 style={{ marginBottom: 16 }}>Approve Accounts</h2>
       <div className="card">
         <table>
-          <thead><tr><th>Clinic</th><th>Type</th><th>City</th><th>Submitted</th><th></th></tr></thead>
+          <thead><tr><th>Clinic</th><th>Rep</th><th>Type</th><th>City</th><th>Submitted</th><th></th></tr></thead>
           <tbody>
-            {pending.map(c => (
-              <tr key={c.id}>
-                <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => setReviewing(c)}>{c.name}</td>
-                <td>{c.type || '—'}</td>
-                <td>{c.city || '—'}</td>
-                <td>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
-                <td><button className="btn" onClick={() => setReviewing(c)}>Review</button></td>
-              </tr>
-            ))}
+            {pending.map(c => {
+              const rep = reps.find(r => r.id === c.rep_id)
+              return (
+                <tr key={c.id}>
+                  <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => setReviewing(c)}>{c.name}</td>
+                  <td>{rep ? rep.full_name || rep.email : '—'}</td>
+                  <td>{c.type || '—'}</td>
+                  <td>{c.city || '—'}</td>
+                  <td>{c.created_at ? new Date(c.created_at).toLocaleDateString() : '—'}</td>
+                  <td><button className="btn" onClick={() => setReviewing(c)}>Review</button></td>
+                </tr>
+              )
+            })}
           </tbody>
         </table>
         {!pending.length && <p style={{ color: '#6b7280', padding: 16 }}>No accounts pending approval.</p>}

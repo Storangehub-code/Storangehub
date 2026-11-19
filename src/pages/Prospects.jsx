@@ -1,5 +1,6 @@
 import { useState } from 'react'
 import { supabase } from '../lib/supabase'
+import { sendEmail, GLOBAL_EMAIL } from '../lib/notify'
 
 export default function Prospects({ clinics = [], onSelect, selectedReps = [], reps = [], role, currentUser, onRefresh }) {
   const [search, setSearch] = useState('')
@@ -205,7 +206,7 @@ ${!supplies.results.length ? '- None' : ''}
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          to: 'spud.w.mann@gmail.com',
+          to: 'cs@responsedx.net',
           subject: 'New Order Request: ' + ordering.name,
           text: orderDetails
         })

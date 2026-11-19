@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
+import { notify, getHigherLevelTargets, sendEmail, GLOBAL_EMAIL } from '../lib/notify'
 
 function formatProviderName(p) {
   const parts = (p.name || '').split(',').map(s => s.trim())
@@ -82,6 +83,11 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
       setActivityNotes('')
       loadActivities()
       setShowFollowup(true)
+      // Notify rep + manager if this was logged by someone else
+      const targets = await getHigherLevelTargets(clinic)
+      if (targets.length) {
+        await notify(targets, `New activity (${activityType}) on ${clinic.name}`, 'activity', clinic.id)
+      }
     }
   }
 
@@ -175,6 +181,11 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
     setShowEdit(false)
     setReqFile(null)
     if (onRefresh) onRefresh()
+    // Notify on edit
+    const targets = await getHigherLevelTargets(clinic)
+    if (targets.length) {
+      await notify(targets, `Account updated: ${clinic.name}`, 'account_edit', clinic.id)
+    }
   }
 
   const handleAddProvider = async () => {
@@ -207,8 +218,18 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
       <div style={{ display: 'flex', gap: 8, marginBottom: 16, flexWrap: 'wrap' }}>
         <button className="btn secondary" onClick={onBack}>← Back</button>
         <button className="btn" onClick={openEdit}>Edit</button>
-        <button className="btn" onClick={() => window.open('https://www.responsedx.net/request-supplies', '_blank')}>Request Supplies</button>
-        <button className="btn" onClick={() => window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')}>Request Pickup</button>
+        <button className="btn" onClick={async () => {
+          const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
+          if (admins) await notify(admins.map(a => a.id), `Supply order requested for ${clinic.name}`, 'supply_order', clinic.id)
+          await sendEmail(GLOBAL_EMAIL, `Supply Order: ${clinic.name}`, `A supply order was requested for ${clinic.name}.`)
+          window.open('https://www.responsedx.net/request-supplies', '_blank')
+        }}>Request Supplies</button>
+        <button className="btn" onClick={async () => {
+          const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
+          if (admins) await notify(admins.map(a => a.id), `Pickup requested for ${clinic.name}`, 'pickup', clinic.id)
+          await sendEmail(GLOBAL_EMAIL, `Pickup Request: ${clinic.name}`, `A pickup was requested for ${clinic.name}.`)
+          window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')
+        }}>Request Pickup</button>
         <button className="btn" onClick={() => {
           const addr = `${clinic.address || ''}, ${clinic.city || ''}, ${clinic.state || ''} ${clinic.zip || ''}`.trim()
           window.open('https://www.google.com/maps/search/catering+near+' + encodeURIComponent(addr), '_blank')

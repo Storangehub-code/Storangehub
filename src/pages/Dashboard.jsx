@@ -16,6 +16,7 @@ import Followups from './Followups'
 import Training from './Training'
 import Users from './Users'
 import MasterLog from './MasterLog'
+import NotificationBell from '../components/NotificationBell'
 
 export default function Dashboard({ session }) {
   const [profile, setProfile] = useState(null)
@@ -122,13 +123,19 @@ export default function Dashboard({ session }) {
             {selectedProvider?.name || selectedClinic?.name || nav.find(n => n.id === page)?.label}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+            <NotificationBell userId={session.user.id} onOpen={(n) => {
+              if (n.clinic_id) {
+                const c = clinics.find(x => x.id === n.clinic_id)
+                if (c) { setSelectedClinic(c); go(c.is_prospect ? 'prospects' : 'accounts') }
+              }
+            }} />
             <span style={{ fontSize: 14, color: '#9ca3af' }}>{profile.full_name || session.user.email}</span>
             <button className="btn secondary" onClick={() => supabase.auth.signOut()}>Log Out</button>
           </div>
         </div>
 
         {page === 'dashboard' && <DashboardHome clinics={clinics} providers={providers} tests={tests} selectedReps={selectedReps} reps={reps} onSelectClinic={(c) => { setSelectedClinic(c); go('accounts') }} onSelectProvider={(p) => { setSelectedProvider(p); go('providers') }} setPage={go} />}
-        {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} onRefresh={loadData} />}
+        {page === 'approve' && role === 'global_admin' && <ApproveAccounts clinics={clinics} reps={reps} onRefresh={loadData} />}
         {page === 'prospects' && !selectedClinic && <Prospects clinics={clinics} onRefresh={loadData} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} currentUser={session.user} />}
         {page === 'prospects' && selectedClinic && <ClinicDetail clinic={selectedClinic} providers={providers} tests={tests} onBack={() => setSelectedClinic(null)} onRefresh={loadData} onSelectProvider={setSelectedProvider} />}
         {page === 'accounts' && !selectedClinic && <Accounts clinics={clinics} tests={tests} onSelect={setSelectedClinic} selectedReps={selectedReps} reps={reps} role={role} onAddProspect={() => go('prospects')} />}
