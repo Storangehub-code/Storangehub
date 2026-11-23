@@ -10,8 +10,8 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 
 const ZOHO_HOST = process.env.ZOHO_IMAP_HOST || 'imap.zoho.com'
-const ZOHO_USER = process.env.ZOHO_EMAIL          // e.g. responsedx@storangehub.com
-const ZOHO_PASS = process.env.ZOHO_APP_PASSWORD   // App password from Zoho
+const ZOHO_USER = process.env.ZOHO_EMAIL          // from env
+const ZOHO_PASS = process.env.ZOHO_APP_PASSWORD   // from env
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
