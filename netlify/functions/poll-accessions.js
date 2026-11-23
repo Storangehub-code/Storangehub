@@ -147,6 +147,7 @@ export default async (req) => {
         // Clean trailing = from accession numbers
         rows.forEach(r => { if (r.accession) r.accession = r.accession.replace(/=+$/, '') })
         console.log(`Email UID ${uid}: parsed ${rows.length} rows`)
+        if (rows[0]) console.log(`  Sample dates — collected: ${rows[0].collected} received: ${rows[0].received} released: ${rows[0].released}`)
 
         for (const row of rows) {
           const clinic = clinicByCode[row.clinic_code]
@@ -195,19 +196,26 @@ export default async (req) => {
             }
           }
 
+          // Build record — only include fields that have values so we don't wipe existing dates
           const record = {
             accession: row.accession,
-            collected: row.collected,
-            collected_at: row.collected,
-            received: row.received,
-            received_at: row.received,
-            released: row.released,
-            finalized: row.released,
-            finalized_at: row.released,
             test_type: row.test_type,
             clinic_id: clinic.id,
-            provider_id: provider?.id || null,
             status: row.released ? 'resulted' : 'received'
+          }
+          if (provider?.id) record.provider_id = provider.id
+          if (row.collected) {
+            record.collected = row.collected
+            record.collected_at = row.collected
+          }
+          if (row.received) {
+            record.received = row.received
+            record.received_at = row.received
+          }
+          if (row.released) {
+            record.released = row.released
+            record.finalized = row.released
+            record.finalized_at = row.released
           }
 
           const { error } = await supabase.from('tests').upsert(record, { onConflict: 'accession' })
