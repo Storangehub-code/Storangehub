@@ -34,8 +34,8 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
   })
 
   const sortedTests = [...dateFilteredTests].sort((a, b) => {
-    const da = a.collected_at || a.collected || ''
-    const db = b.collected_at || b.collected || ''
+    const da = a.received_at || a.received || a.collected_at || a.collected || ''
+    const db = b.received_at || b.received || b.collected_at || b.collected || ''
     return db.localeCompare(da)
   })
 
