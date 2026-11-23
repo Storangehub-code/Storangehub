@@ -1,3 +1,7 @@
+// netlify/functions/poll-accessions.js
+// Scheduled function that checks Zoho inbox for Daily Accessioning Reports
+// and upserts them into the tests table.
+
 import { createClient } from '@supabase/supabase-js'
 import { ImapFlow } from 'imapflow'
 import * as cheerio from 'cheerio'
@@ -6,14 +10,15 @@ const SUPABASE_URL = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
 const SUPABASE_SERVICE_KEY = process.env.SUPABASE_SERVICE_KEY
 
 const ZOHO_HOST = process.env.ZOHO_IMAP_HOST || 'imap.zoho.com'
-const ZOHO_USER = process.env.ZOHO_EMAIL
-const ZOHO_PASS = process.env.ZOHO_APP_PASSWORD
+const ZOHO_USER = process.env.ZOHO_EMAIL          // e.g. responsedx@storangehub.com
+const ZOHO_PASS = process.env.ZOHO_APP_PASSWORD   // App password from Zoho
 
 const supabase = createClient(SUPABASE_URL, SUPABASE_SERVICE_KEY)
 
 function parseDate(str) {
   if (!str) return null
   const s = String(str).trim()
+  // Handles 11/4/2026, 11/20/2026, etc.
   const m = s.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
   if (m) {
     const [, mon, day, year] = m
@@ -29,6 +34,7 @@ function normalizeName(raw) {
   const s = String(raw).trim()
   const parts = s.split(',').map(p => p.trim())
   if (parts.length >= 2) {
+    // "Kidd MD,Robert" → last=Kidd, first=Robert
     const last = parts[0].replace(/\s+(MD|DO|NP|PA|FNP|APRN|DPM)\.?$/i, '').trim()
     const first = parts[parts.length - 1]
     return `${last}, ${first}`.toLowerCase()
@@ -65,6 +71,7 @@ function parseTable(html) {
   $('table tr').each((i, tr) => {
     const cells = $(tr).find('td, th').map((_, el) => $(el).text().trim()).get()
     if (cells.length < 8) return
+    // Skip header-like rows
     if (cells[0].toLowerCase().includes('order') || cells[0] === '') return
 
     const [orderNumber, clinicName, clinicCode, providerName, collectionDate, receivedDate, releasedDate, testOrdered, payer] = cells
@@ -109,15 +116,17 @@ export default async (req) => {
     const lock = await client.getMailboxLock('INBOX')
 
     try {
+      // Find unread messages that look like accession reports
       const messages = await client.search({ unseen: true })
       console.log(`Found ${messages.length} unseen messages`)
 
       const { clinicByCode, providerByName } = await loadLookups()
 
-      for (const uid of messages.slice(0, 20)) {
+      for (const uid of messages.slice(0, 20)) { // process up to 20 at a time
         const msg = await client.fetchOne(uid, { source: true, envelope: true })
         const source = msg.source.toString()
 
+        // Simple check for the report
         if (!source.toLowerCase().includes('daily accessioning report') &&
             !(msg.envelope?.subject || '').toLowerCase().includes('accession')) {
           continue
@@ -129,12 +138,17 @@ export default async (req) => {
         for (const row of rows) {
           const clinic = clinicByCode[row.clinic_code]
           if (!clinic) {
-            errors.push(`No clinic match for code ${row.clinic_code} (${row.clinic_name})`)
+            const msg = `No clinic match for code ${row.clinic_code} (${row.clinic_name})`
+            console.log(msg)
+            errors.push(msg)
             continue
           }
+          console.log(`Matched clinic: ${clinic.name} (${row.clinic_code})`)
 
           const providerKey = normalizeName(row.provider_raw)
           const provider = providerByName[providerKey] || null
+          if (provider) console.log(`Matched provider: ${provider.last_name}, ${provider.first_name}`)
+          else console.log(`No provider match for: ${row.provider_raw}`)
 
           const record = {
             accession: row.accession,
@@ -151,13 +165,17 @@ export default async (req) => {
 
           const { error } = await supabase.from('tests').upsert(record, { onConflict: 'accession' })
           if (error) {
-            errors.push(`Upsert failed for ${row.accession}: ${error.message}`)
+            const msg = `Upsert failed for ${row.accession}: ${error.message}`
+            console.log(msg)
+            errors.push(msg)
           } else {
+            console.log(`Upserted ${row.accession} (${row.test_type})`)
             if (row.released) updated++
             else inserted++
           }
         }
 
+        // Mark as seen
         await client.messageFlagsAdd(uid, ['\\Seen'])
         processed++
       }
@@ -171,6 +189,9 @@ export default async (req) => {
     return new Response(JSON.stringify({ error: e.message, processed, inserted, updated, errors }), { status: 500 })
   }
 
+  console.log(`Done. Processed: ${processed}, Inserted: ${inserted}, Updated: ${updated}, Errors: ${errors.length}`)
+  if (errors.length) console.log('Errors:', errors.slice(0, 10))
+
   return new Response(JSON.stringify({
     ok: true,
     processed,
@@ -181,5 +202,5 @@ export default async (req) => {
 }
 
 export const config = {
-  schedule: '0 7,13,19 * * *'
+  schedule: '0 7,13,19 * * *'  // 7am, 1pm, 7pm UTC (adjust as needed)
 }
