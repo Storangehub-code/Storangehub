@@ -31,13 +31,19 @@ function parseDate(str) {
 
 function normalizeName(raw) {
   if (!raw) return ''
-  const s = String(raw).trim()
-  const parts = s.split(',').map(p => p.trim())
+  let s = String(raw).trim().replace(/\s+/g, ' ')
+  // Remove common titles anywhere
+  s = s.replace(/\b(MD|DO|NP|PA|FNP|APRN|DPM|RN|MA)\b\.?/gi, '').replace(/\s+/g, ' ').trim()
+  const parts = s.split(',').map(p => p.trim()).filter(Boolean)
   if (parts.length >= 2) {
-    // "Kidd MD,Robert" → last=Kidd, first=Robert
-    const last = parts[0].replace(/\s+(MD|DO|NP|PA|FNP|APRN|DPM)\.?$/i, '').trim()
+    const last = parts[0]
     const first = parts[parts.length - 1]
     return `${last}, ${first}`.toLowerCase()
+  }
+  // Also try "First Last" style
+  const words = s.split(' ').filter(Boolean)
+  if (words.length >= 2) {
+    return `${words[words.length - 1]}, ${words[0]}`.toLowerCase()
   }
   return s.toLowerCase()
 }
@@ -58,6 +64,7 @@ async function loadLookups() {
     if (last && first) {
       providerByName[`${last}, ${first}`.toLowerCase()] = p
       providerByName[`${first} ${last}`.toLowerCase()] = p
+      providerByName[`${last} ${first}`.toLowerCase()] = p
     }
   })
 
@@ -154,7 +161,7 @@ export default async (req) => {
           const providerKey = normalizeName(row.provider_raw)
           const provider = providerByName[providerKey] || null
           if (provider) console.log(`Matched provider: ${provider.last_name}, ${provider.first_name}`)
-          else console.log(`No provider match for: ${row.provider_raw}`)
+          else console.log(`No provider match for: ${row.provider_raw} (key: ${providerKey})`)
 
           const record = {
             accession: row.accession,
