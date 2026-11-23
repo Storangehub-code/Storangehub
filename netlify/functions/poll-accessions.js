@@ -133,6 +133,8 @@ export default async (req) => {
         }
 
         const rows = parseTable(source)
+        // Clean trailing = from accession numbers
+        rows.forEach(r => { if (r.accession) r.accession = r.accession.replace(/=+$/, '') })
         console.log(`Email UID ${uid}: parsed ${rows.length} rows`)
 
         for (const row of rows) {
@@ -159,7 +161,7 @@ export default async (req) => {
             test_type: row.test_type,
             clinic_id: clinic.id,
             provider_id: provider?.id || null,
-            status: row.released ? 'resulted' : 'accessioned'
+            status: row.released ? 'resulted' : 'received'
           }
 
           const { error } = await supabase.from('tests').upsert(record, { onConflict: 'accession' })
