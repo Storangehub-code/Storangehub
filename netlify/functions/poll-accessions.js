@@ -74,12 +74,11 @@ function parseTable(html) {
     // Skip header-like rows
     if (cells[0].toLowerCase().includes('order') || cells[0] === '') return
 
-    const [orderNumber, clinicName, clinicCode, providerName, collectionDate, receivedDate, releasedDate, testOrdered, payer] = cells
+    // Clean quoted-printable artifacts (soft line breaks and trailing =)
+    const clean = (s) => String(s || '').replace(/=\r?\n/g, '').replace(/=+$/, '').replace(/<[^>]*>/g, '').trim()
+    const cleaned = cells.map(clean)
 
-    // DEBUG: log raw cells for first few rows
-    if (rows.length < 2) {
-      console.log('RAW CELLS:', JSON.stringify(cells))
-    }
+    const [orderNumber, clinicName, clinicCode, providerName, collectionDate, receivedDate, releasedDate, testOrdered, payer] = cleaned
 
     if (!orderNumber || !clinicCode) return
 
