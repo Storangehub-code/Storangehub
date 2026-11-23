@@ -159,7 +159,6 @@ export default async (req) => {
             test_type: row.test_type,
             clinic_id: clinic.id,
             provider_id: provider?.id || null,
-            payer: row.payer || null,
             status: row.released ? 'resulted' : 'accessioned'
           }
 
