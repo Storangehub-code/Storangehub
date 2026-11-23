@@ -117,8 +117,8 @@ export default async (req) => {
 
     try {
       // Find unread messages that look like accession reports
-      const messages = await client.search({ unseen: true })
-      console.log(`Found ${messages.length} unseen messages`)
+      const messages = await client.search({ since: new Date(Date.now() - 7 * 24 * 60 * 60 * 1000) })  // last 7 days
+      console.log(`Found ${messages.length} recent messages`)
 
       const { clinicByCode, providerByName } = await loadLookups()
 
