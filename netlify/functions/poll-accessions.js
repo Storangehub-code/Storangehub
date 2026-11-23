@@ -159,9 +159,39 @@ export default async (req) => {
           console.log(`Matched clinic: ${clinic.name} (${row.clinic_code})`)
 
           const providerKey = normalizeName(row.provider_raw)
-          const provider = providerByName[providerKey] || null
-          if (provider) console.log(`Matched provider: ${provider.last_name}, ${provider.first_name}`)
-          else console.log(`No provider match for: ${row.provider_raw} (key: ${providerKey})`)
+          let provider = providerByName[providerKey] || null
+          if (provider) {
+            console.log(`Matched provider: ${provider.last_name}, ${provider.first_name}`)
+          } else if (row.provider_raw) {
+            // Auto-create missing provider
+            const parts = row.provider_raw.replace(/\b(MD|DO|NP|PA|FNP|APRN|DPM)\b\.?/gi, '').split(',').map(s => s.trim()).filter(Boolean)
+            const last = parts[0] || 'Unknown'
+            const first = parts[1] || 'Unknown'
+            const { data: newProv, error: createErr } = await supabase.from('providers').insert({
+              first_name: first,
+              last_name: last,
+              clinic_id: clinic.id
+            }).select().single()
+            if (createErr) {
+              console.log(`Failed to create provider for ${row.provider_raw}: ${createErr.message}`)
+            } else {
+              provider = newProv
+              providerByName[providerKey] = provider
+              console.log(`Created provider: ${last}, ${first}`)
+
+              // Notify global admins
+              const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
+              if (admins && admins.length) {
+                const notes = admins.map(a => ({
+                  user_id: a.id,
+                  message: `New provider created from accession: ${last}, ${first} at ${clinic.name}`,
+                  type: 'provider_created',
+                  clinic_id: clinic.id
+                }))
+                await supabase.from('notifications').insert(notes)
+              }
+            }
+          }
 
           const record = {
             accession: row.accession,
