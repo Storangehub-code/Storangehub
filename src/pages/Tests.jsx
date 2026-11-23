@@ -69,7 +69,14 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
                   {clinics.find(c => c.id === t.clinic_id)?.name || '—'}
                 </td>
                 <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectProvider && providers.find(p => p.id === t.provider_id) && onSelectProvider(providers.find(p => p.id === t.provider_id))}>
-                  {providers.find(p => p.id === t.provider_id)?.name ? formatName(providers.find(p => p.id === t.provider_id).name) : (t.provider_name ? formatName(t.provider_name) : '—')}
+                  {(() => {
+                  const prov = providers.find(p => p.id === t.provider_id)
+                  if (prov) {
+                    if (prov.name) return formatName(prov.name)
+                    if (prov.last_name || prov.first_name) return `${prov.last_name || ''}, ${prov.first_name || ''}`.replace(/^, |, $/g, '').trim() || '—'
+                  }
+                  return t.provider_name ? formatName(t.provider_name) : '—'
+                })()}
                 </td>
               </tr>
             ))}

@@ -167,9 +167,11 @@ export default async (req) => {
             const parts = row.provider_raw.replace(/\b(MD|DO|NP|PA|FNP|APRN|DPM)\b\.?/gi, '').split(',').map(s => s.trim()).filter(Boolean)
             const last = parts[0] || 'Unknown'
             const first = parts[1] || 'Unknown'
+            const displayName = `${last}, ${first}`.replace(/, Unknown$/, '')
             const { data: newProv, error: createErr } = await supabase.from('providers').insert({
               first_name: first,
               last_name: last,
+              name: displayName,
               clinic_id: clinic.id
             }).select().single()
             if (createErr) {
