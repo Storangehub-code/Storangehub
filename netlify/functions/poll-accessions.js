@@ -76,6 +76,11 @@ function parseTable(html) {
 
     const [orderNumber, clinicName, clinicCode, providerName, collectionDate, receivedDate, releasedDate, testOrdered, payer] = cells
 
+    // DEBUG: log raw cells for first few rows
+    if (rows.length < 2) {
+      console.log('RAW CELLS:', JSON.stringify(cells))
+    }
+
     if (!orderNumber || !clinicCode) return
 
     rows.push({
