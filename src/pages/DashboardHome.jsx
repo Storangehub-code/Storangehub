@@ -172,7 +172,7 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
         <div className="card">
           <h3 style={{ marginBottom: 12 }}>Recent Testing Activity</h3>
           <table style={{ fontSize: 13 }}>
-            <thead><tr><th>ACCESSION</th><th>RECEIVED</th><th>RESULTED</th><th>TEST</th><th>PROVIDER</th><th>PRACTICE</th></tr></thead>
+            <thead><tr><th>ACCESSION</th><th>COLLECTED</th><th>RECEIVED</th><th>RELEASED</th><th>TEST</th><th>PROVIDER</th><th>PRACTICE</th></tr></thead>
             <tbody>
               {recentTests.map(t => {
                 const fmt = (d) => {
@@ -185,7 +185,8 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
                   <tr key={t.id}>
                     <td>{t.accession || '—'}</td>
                     <td>{fmt(t.collected_at || t.collected)}</td>
-                    <td>{fmt(t.finalized_at || t.finalized)}</td>
+                    <td>{fmt(t.received_at || t.received)}</td>
+                    <td>{fmt(t.released || t.finalized_at || t.finalized)}</td>
                     <td>{t.test_type || '—'}</td>
                     <td style={{ color: '#14b8a6' }}>{(() => {
                     const prov = providers.find(p => p.id === t.provider_id)

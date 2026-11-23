@@ -52,7 +52,8 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
             <tr>
               <th>Accession</th>
               <th>Collected</th>
-              <th>Finalized</th>
+              <th>Received</th>
+              <th>Released</th>
               <th>Test</th>
               <th>Clinic</th>
               <th>Provider</th>
@@ -63,7 +64,8 @@ export default function Tests({ tests = [], clinics = [], providers = [], onSele
               <tr key={t.id}>
                 <td>{t.accession || '—'}</td>
                 <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
-                <td>{formatDate(t.finalized_at || t.finalized) || '—'}</td>
+                <td>{formatDate(t.received_at || t.received) || '—'}</td>
+                <td>{formatDate(t.released || t.finalized_at || t.finalized) || '—'}</td>
                 <td>{t.test_type || '—'}</td>
                 <td style={{ color: '#14b8a6', cursor: 'pointer' }} onClick={() => onSelectClinic && clinics.find(c => c.id === t.clinic_id) && onSelectClinic(clinics.find(c => c.id === t.clinic_id))}>
                   {clinics.find(c => c.id === t.clinic_id)?.name || '—'}
