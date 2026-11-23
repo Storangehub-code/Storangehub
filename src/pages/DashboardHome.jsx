@@ -33,7 +33,13 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
     return d >= startDate && d <= endDate
   })
 
-  const totalTests = dateFilteredTests.length
+  const sortedTests = [...dateFilteredTests].sort((a, b) => {
+    const da = a.collected_at || a.collected || ''
+    const db = b.collected_at || b.collected || ''
+    return db.localeCompare(da)
+  })
+
+  const totalTests = sortedTests.length
   const activeAccounts = filteredClinics.filter(c => dateFilteredTests.some(t => t.clinic_id === c.id)).length
   const needAttention = filteredClinics.filter(c => !dateFilteredTests.some(t => t.clinic_id === c.id))
 
@@ -76,8 +82,8 @@ export default function DashboardHome({ clinics = [], providers = [], tests = []
   }).filter(c => c.name)
 
   // Recent tests
-  const recentTests = dateFilteredTests.slice(testPage * 10, (testPage + 1) * 10)
-  const totalTestPages = Math.ceil(dateFilteredTests.length / 10)
+  const recentTests = sortedTests.slice(testPage * 10, (testPage + 1) * 10)
+  const totalTestPages = Math.ceil(sortedTests.length / 10)
 
   // Attention list
   const attentionList = needAttention.slice(attentionPage * 10, (attentionPage + 1) * 10)
