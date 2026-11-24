@@ -36,6 +36,7 @@ export default function ClinicDetail({ clinic: clinicProp, providers = [], tests
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({})
   const [reqItems, setReqItems] = useState([])   // {type, file, existingUrl, name}
+  const [showReqMenu, setShowReqMenu] = useState(false)
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [newProvider, setNewProvider] = useState({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
   const [saving, setSaving] = useState(false)
@@ -253,7 +254,32 @@ export default function ClinicDetail({ clinic: clinicProp, providers = [], tests
           const addr = `${clinic.address || ''}, ${clinic.city || ''}, ${clinic.state || ''} ${clinic.zip || ''}`.trim()
           window.open('https://www.google.com/maps/search/catering+near+' + encodeURIComponent(addr), '_blank')
         }}>Find Catering</button>
-        <button className="btn secondary">Requisition Form ▾</button>
+        {(() => {
+  let reqs = []
+  try { reqs = typeof clinic.requisitions === 'string' ? JSON.parse(clinic.requisitions) : (clinic.requisitions || []) } catch {}
+  if (!reqs.length && clinic.requisition) reqs = [{ type: 'General', url: clinic.requisition }]
+  if (!reqs.length) return null
+  return (
+    <div style={{ position: 'relative', display: 'inline-block' }}>
+      <button className="btn secondary" onClick={() => setShowReqMenu(v => !v)}>
+        Requisition Form ▾
+      </button>
+      {showReqMenu && (
+        <div style={{ position: 'absolute', top: '100%', left: 0, background: '#1f2937', border: '1px solid #374151', borderRadius: 6, minWidth: 180, zIndex: 10, marginTop: 4 }}>
+          {reqs.map((r, i) => (
+            <a key={i} href={r.url} target="_blank" rel="noreferrer"
+              style={{ display: 'block', padding: '8px 12px', color: '#e5e7eb', textDecoration: 'none', fontSize: 14 }}
+              onMouseEnter={e => e.currentTarget.style.background = '#374151'}
+              onMouseLeave={e => e.currentTarget.style.background = 'transparent'}
+              onClick={() => setShowReqMenu(false)}>
+              {r.type || 'Requisition'}
+            </a>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+})()}
       </div>
 
       <div style={{ display: 'flex', gap: 4, marginBottom: 16 }}>
