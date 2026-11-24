@@ -28,6 +28,10 @@ export default function ApproveAccounts({ clinics = [], reps = [], onRefresh }) 
     await supabase.from('clinics').update({ stage: 'Approved', is_prospect: false, clinic_code: clinicCode.trim() }).eq('id', id)
     if (clinic?.rep_id) {
       await notify([clinic.rep_id], `Account approved: ${clinic.name} is now live`, 'account_approved', id)
+      const { data: rep } = await supabase.from('profiles').select('email, full_name').eq('id', clinic.rep_id).single()
+      if (rep?.email) {
+        await sendEmail(rep.email, `Account Approved: ${clinic?.name || ''}`, `The account "${clinic?.name || ''}" has been approved and is now active.`)
+      }
     }
     await sendEmail(GLOBAL_EMAIL, `Account Approved: ${clinic?.name || ''}`, `The account "${clinic?.name || ''}" has been approved and is now active.`)
     setReviewing(null)
