@@ -26,7 +26,9 @@ function formatDate(d) {
   return `${m}-${day}-${y}`
 }
 
-export default function ClinicDetail({ clinic, providers = [], tests = [], onBack, onSelectProvider, onRefresh }) {
+export default function ClinicDetail({ clinic: clinicProp, providers = [], tests = [], onBack, onSelectProvider, onRefresh }) {
+  const [clinic, setClinic] = useState(clinicProp)
+  useEffect(() => { setClinic(clinicProp) }, [clinicProp])
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({})
@@ -191,8 +193,9 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
     const { error } = await supabase.from('clinics').update(payload).eq('id', clinic.id)
     setSaving(false)
     if (error) return alert(error.message)
+    setClinic(prev => ({ ...prev, ...payload }))
     setShowEdit(false)
-    setReqFile(null)
+    setReqItems([])
     if (onRefresh) onRefresh()
     // Notify on edit
     const targets = await getHigherLevelTargets(clinic)
