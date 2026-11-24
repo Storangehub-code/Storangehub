@@ -56,7 +56,11 @@ export default function Reps({ selected, setSelected, clinics = [], tests = [], 
             {reps.map(r => (
               <tr key={r.id}>
                 <td><input type="checkbox" checked={selected.includes(r.id)} onChange={() => toggle(r.id)} /></td>
-                <td style={{ color: '#14b8a6' }}>{r.full_name || '—'}</td>
+                <td>
+                  <span style={{ color: '#14b8a6', cursor: 'pointer', textDecoration: 'underline' }} onClick={() => onSelectRep && onSelectRep(r)}>
+                    {r.full_name || '—'}
+                  </span>
+                </td>
                 <td>{managers.find(m => m.id === r.manager_id)?.full_name || '—'}</td>
                 <td>{clinics.filter(c => c.rep_id === r.id).length}</td>
                 <td>{tests.filter(t => clinics.some(c => c.id === t.clinic_id && c.rep_id === r.id)).length}</td>
