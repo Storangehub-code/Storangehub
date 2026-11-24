@@ -235,13 +235,15 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
           const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
           if (admins) await notify(admins.map(a => a.id), `Supply order requested for ${clinic.name}`, 'supply_order', clinic.id)
           await sendEmail(GLOBAL_EMAIL, `Supply Order: ${clinic.name}`, `A supply order was requested for ${clinic.name}.`)
-          window.open('https://www.responsedx.net/request-supplies', '_blank')
+          const url = clinic.supplies_url || 'https://www.responsedx.net/request-supplies'
+          window.open(url, '_blank')
         }}>Request Supplies</button>
         <button className="btn" onClick={async () => {
           const { data: admins } = await supabase.from('profiles').select('id').eq('role', 'global_admin')
           if (admins) await notify(admins.map(a => a.id), `Pickup requested for ${clinic.name}`, 'pickup', clinic.id)
           await sendEmail(GLOBAL_EMAIL, `Pickup Request: ${clinic.name}`, `A pickup was requested for ${clinic.name}.`)
-          window.open('https://www.responsedx.net/copy-of-request-an-account', '_blank')
+          const url = clinic.ordering_url || 'https://www.responsedx.net/copy-of-request-an-account'
+          window.open(url, '_blank')
         }}>Request Pickup</button>
         <button className="btn" onClick={() => {
           const addr = `${clinic.address || ''}, ${clinic.city || ''}, ${clinic.state || ''} ${clinic.zip || ''}`.trim()
