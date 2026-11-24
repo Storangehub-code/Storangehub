@@ -30,7 +30,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
   const [tab, setTab] = useState('info')
   const [showEdit, setShowEdit] = useState(false)
   const [editForm, setEditForm] = useState({})
-  const [reqFile, setReqFile] = useState(null)
+  const [reqItems, setReqItems] = useState([])   // {type, file, existingUrl, name}
   const [showAddProvider, setShowAddProvider] = useState(false)
   const [newProvider, setNewProvider] = useState({ first: '', last: '', title: '', email: '', phone: '', npi: '' })
   const [saving, setSaving] = useState(false)
@@ -157,24 +157,37 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
       emr: clinic.emr || '',
       office_contact: clinic.office_contact || '',
       ordering_url: clinic.ordering_url || '',
-      supplies_url: clinic.supplies_url || '',
-      requisition: clinic.requisition || ''
+      supplies_url: clinic.supplies_url || ''
     })
+    // load existing requisitions (json array or legacy single url)
+    let existing = []
+    try {
+      if (clinic.requisitions) existing = typeof clinic.requisitions === 'string' ? JSON.parse(clinic.requisitions) : clinic.requisitions
+    } catch {}
+    if (!existing.length && clinic.requisition) existing = [{ type: 'General', url: clinic.requisition, name: 'Requisition' }]
+    setReqItems(existing.map(r => ({ type: r.type || 'General', file: null, existingUrl: r.url || '', name: r.name || '' })))
     setShowEdit(true)
   }
 
   async function saveClinicEdit() {
     if (!editForm.name) return alert('Name is required')
     setSaving(true)
-    let requisition = editForm.requisition
-    if (reqFile) {
-      const path = `requisitions/${clinic.id}-${Date.now()}-${reqFile.name}`
-      const { error: upErr } = await supabase.storage.from('docs').upload(path, reqFile, { upsert: true })
-      if (upErr) { setSaving(false); return alert('Upload failed: ' + upErr.message) }
-      const { data: urlData } = supabase.storage.from('docs').getPublicUrl(path)
-      requisition = urlData.publicUrl
+    // Upload any new requisition files and build the array
+    const savedReqs = []
+    for (const item of reqItems) {
+      if (!item.type) continue
+      let url = item.existingUrl || ''
+      if (item.file) {
+        const path = `requisitions/${clinic.id}-${Date.now()}-${item.file.name}`
+        const { error: upErr } = await supabase.storage.from('docs').upload(path, item.file, { upsert: true })
+        if (upErr) { setSaving(false); return alert('Upload failed: ' + upErr.message) }
+        const { data: urlData } = supabase.storage.from('docs').getPublicUrl(path)
+        url = urlData.publicUrl
+      }
+      if (url) savedReqs.push({ type: item.type, url, name: item.name || item.file?.name || item.type })
     }
-    const payload = { ...editForm, requisition }
+    const { requisition: _r, requisitions: _rs, ...rest } = editForm
+    const payload = { ...rest, requisitions: savedReqs }
     const { error } = await supabase.from('clinics').update(payload).eq('id', clinic.id)
     setSaving(false)
     if (error) return alert(error.message)
@@ -251,7 +264,23 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             <div>
               <p><strong>Type:</strong> {clinic.type || clinic.clinic_type || 'Clinic'}</p>
               <p><strong>Pickup URL:</strong> {clinic.ordering_url || '—'}</p>
-              <p><strong>Requisition:</strong> {clinic.requisition ? <a href={clinic.requisition} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a> : '—'}</p>
+              <div>
+                <strong>Requisitions:</strong>
+                {(() => {
+                  let list = []
+                  try { list = typeof clinic.requisitions === 'string' ? JSON.parse(clinic.requisitions) : (clinic.requisitions || []) } catch {}
+                  if (!list.length && clinic.requisition) list = [{ type: 'General', url: clinic.requisition }]
+                  return list.length ? (
+                    <div style={{ marginTop: 4 }}>
+                      {list.map((r, i) => (
+                        <div key={i} style={{ fontSize: 13 }}>
+                          {r.type}: <a href={r.url} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a>
+                        </div>
+                      ))}
+                    </div>
+                  ) : ' —'
+                })()}
+              </div>
               <p><strong>City:</strong> {clinic.city || '—'}</p>
               <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
               <p><strong>Email:</strong> {clinic.email || '—'}</p>
@@ -429,9 +458,24 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
               <div><label>Pickup URL</label><input value={editForm.ordering_url} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} /></div>
               <div><label>Supplies URL</label><input value={editForm.supplies_url} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} /></div>
               <div style={{ gridColumn: '1 / -1' }}>
-                <label>Requisition (PDF)</label>
-                <input type="file" accept="application/pdf" onChange={e => setReqFile(e.target.files?.[0] || null)} />
-                {clinic.requisition && !reqFile && <div style={{ fontSize: 12, marginTop: 4 }}><a href={clinic.requisition} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>Current PDF</a></div>}
+                <label>Requisitions (PDF)</label>
+                {reqItems.map((item, idx) => (
+                  <div key={idx} style={{ display: 'flex', gap: 8, marginBottom: 8, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <select value={item.type} onChange={e => { const next = [...reqItems]; next[idx].type = e.target.value; setReqItems(next) }} style={{ flex: '0 0 140px' }}>
+                      <option>Urine</option>
+                      <option>SynoviFact</option>
+                      <option>Wound</option>
+                      <option>RPP</option>
+                      <option>UTI</option>
+                      <option>Culture</option>
+                      <option>General</option>
+                    </select>
+                    <input type="file" accept="application/pdf" onChange={e => { const next = [...reqItems]; next[idx].file = e.target.files?.[0] || null; setReqItems(next) }} style={{ flex: 1 }} />
+                    {item.existingUrl && !item.file && <a href={item.existingUrl} target="_blank" rel="noreferrer" style={{ color: '#14b8a6', fontSize: 12 }}>Current</a>}
+                    <button type="button" className="btn secondary" style={{ padding: '4px 8px' }} onClick={() => setReqItems(reqItems.filter((_, i) => i !== idx))}>✕</button>
+                  </div>
+                ))}
+                <button type="button" className="btn secondary" style={{ fontSize: 13 }} onClick={() => setReqItems([...reqItems, { type: 'Urine', file: null, existingUrl: '', name: '' }])}>+ Add Requisition</button>
               </div>
             </div>
             <div style={{ display: 'flex', gap: 8, marginTop: 16 }}>
