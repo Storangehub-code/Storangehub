@@ -265,7 +265,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
               <p><strong>Type:</strong> {clinic.type || clinic.clinic_type || 'Clinic'}</p>
-              <p><strong>Pickup URL:</strong> {clinic.ordering_url || '—'}</p>
+              <p><strong>Pickup URL:</strong> {clinic.ordering_url ? 'Custom URL uploaded' : '—'}</p>
               <div>
                 <strong>Requisitions:</strong>
                 {(() => {
@@ -289,7 +289,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             </div>
             <div>
               <p><strong>EMR:</strong> {clinic.emr || '—'}</p>
-              <p><strong>Supplies URL:</strong> {clinic.supplies_url || '—'}</p>
+              <p><strong>Supplies URL:</strong> {clinic.supplies_url ? 'Custom URL uploaded' : '—'}</p>
               <p><strong>Address:</strong> {clinic.address || '—'}, {clinic.city || ''}, {clinic.state || ''} {clinic.zip || ''}</p>
               <p><strong>Phone:</strong> {clinic.phone || '—'}</p>
             </div>
