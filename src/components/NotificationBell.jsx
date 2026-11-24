@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function NotificationBell({ userId, onOpen }) {
+export default function NotificationBell({ userId, onOpen, onBellClick }) {
   const [notes, setNotes] = useState([])
   const [open, setOpen] = useState(false)
 
@@ -28,7 +28,7 @@ export default function NotificationBell({ userId, onOpen }) {
 
   return (
     <div style={{ position: 'relative' }}>
-      <button onClick={() => setOpen(!open)} style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative', fontSize: 20, color: '#9ca3af' }}>
+      <button onClick={() => { if (onBellClick) onBellClick(); else setOpen(!open) }} style={{ background: 'none', border: 'none', cursor: 'pointer', position: 'relative', fontSize: 20, color: '#9ca3af' }}>
         🔔
         {unread > 0 && <span style={{ position: 'absolute', top: -4, right: -6, background: '#ef4444', color: 'white', borderRadius: '50%', width: 18, height: 18, fontSize: 11, display: 'flex', alignItems: 'center', justifyContent: 'center' }}>{unread}</span>}
       </button>

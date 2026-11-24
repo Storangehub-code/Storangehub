@@ -17,6 +17,7 @@ import Training from './Training'
 import Users from './Users'
 import MasterLog from './MasterLog'
 import NotificationBell from '../components/NotificationBell'
+import Notifications from './Notifications'
 import PushRegister from '../components/PushRegister'
 
 export default function Dashboard({ session }) {
@@ -122,10 +123,10 @@ export default function Dashboard({ session }) {
       <div style={{ flex: 1, padding: 28, background: '#0b1220', overflow: 'auto' }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h1 style={{ fontSize: 24, fontWeight: 600 }}>
-            {selectedProvider?.name || selectedClinic?.name || nav.find(n => n.id === page)?.label}
+            {selectedProvider?.name || selectedClinic?.name || nav.find(n => n.id === page)?.label || (page === 'notifications' ? 'Notifications' : '')}
           </h1>
           <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-            <NotificationBell userId={session.user.id} onOpen={(n) => {
+            <NotificationBell userId={session.user.id} onBellClick={() => go('notifications')} onOpen={(n) => {
               if (n.clinic_id) {
                 const c = clinics.find(x => x.id === n.clinic_id)
                 if (c) { setSelectedClinic(c); go(c.is_prospect ? 'prospects' : 'accounts') }
@@ -153,6 +154,7 @@ export default function Dashboard({ session }) {
         {page === 'training' && <Training role={role} />}
         {page === 'users' && role === 'global_admin' && <Users />}
         {page === 'master' && isMaster && <MasterLog />}
+        {page === 'notifications' && <Notifications userId={session.user.id} clinics={clinics} onOpenClinic={(c) => { setSelectedClinic(c); go(c.is_prospect ? 'prospects' : 'accounts') }} />}
       </div>
     </div>
   )
