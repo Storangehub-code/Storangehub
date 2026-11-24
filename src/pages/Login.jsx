@@ -5,11 +5,19 @@ export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isSignUp, setIsSignUp] = useState(false)
+  const [isReset, setIsReset] = useState(false)
   const [message, setMessage] = useState('')
 
   async function handleSubmit(e) {
     e.preventDefault()
     setMessage('')
+    if (isReset) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: window.location.origin
+      })
+      setMessage(error ? error.message : 'Password reset email sent. Check your inbox.')
+      return
+    }
     if (isSignUp) {
       const { error } = await supabase.auth.signUp({ email, password })
       setMessage(error ? error.message : 'Check your email to confirm.')
@@ -20,20 +28,25 @@ export default function Login() {
   }
 
   return (
-    <div style={{ maxWidth: 360, margin: '80px auto', padding: 24, textAlign: 'center' }}>
-      <img 
-        src="/logo.png" 
-        alt="Response DX" 
-        style={{ maxWidth: '100%', height: 'auto', marginBottom: 32, display: 'block', marginLeft: 'auto', marginRight: 'auto' }} 
-      />
+    <div style={{ maxWidth: 360, margin: '80px auto', padding: 24 }}>
+      <h1 style={{ marginBottom: 24 }}>Response DX CRM</h1>
       <form onSubmit={handleSubmit}>
-        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} required />
-        <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 12, padding: 10, borderRadius: 6, border: '1px solid #ccc' }} required />
-        <button className="btn" type="submit" style={{ width: '100%', padding: 12 }}>{isSignUp ? 'Sign Up' : 'Log In'}</button>
+        <input type="email" placeholder="Email" value={email} onChange={e => setEmail(e.target.value)} style={{ width: '100%', marginBottom: 12 }} required />
+        {!isReset && (
+          <input type="password" placeholder="Password" value={password} onChange={e => setPassword(e.target.value)} style={{ width: '100%', marginBottom: 12 }} required />
+        )}
+        <button className="btn" type="submit" style={{ width: '100%' }}>
+          {isReset ? 'Send Reset Email' : isSignUp ? 'Sign Up' : 'Log In'}
+        </button>
       </form>
       <p style={{ marginTop: 16, fontSize: 14 }}>
-        <span style={{ cursor: 'pointer', color: '#14b8a6' }} onClick={() => setIsSignUp(!isSignUp)}>
-          {isSignUp ? 'Already have an account? Log in' : 'Need an account? Sign up'}
+        {!isReset && (
+          <span style={{ cursor: 'pointer', color: '#14b8a6', marginRight: 16 }} onClick={() => { setIsSignUp(!isSignUp); setIsReset(false); }}>
+            {isSignUp ? 'Already have an account? Log in' : 'Need an account? Sign up'}
+          </span>
+        )}
+        <span style={{ cursor: 'pointer', color: '#14b8a6' }} onClick={() => { setIsReset(!isReset); setIsSignUp(false); }}>
+          {isReset ? 'Back to login' : 'Forgot password?'}
         </span>
       </p>
       {message && <p style={{ marginTop: 12, color: '#f59e0b' }}>{message}</p>}
