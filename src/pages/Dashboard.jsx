@@ -9,6 +9,7 @@ import Providers from './Providers'
 import ProviderDetail from './ProviderDetail'
 import Tests from './Tests'
 import Reps from './Reps'
+import RepPerformance from './RepPerformance'
 import Managers from './Managers'
 import Expenses from './Expenses'
 import Reports from './Reports'
@@ -30,6 +31,7 @@ export default function Dashboard({ session }) {
   const [selectedClinic, setSelectedClinic] = useState(null)
   const [selectedProvider, setSelectedProvider] = useState(null)
   const [selectedReps, setSelectedReps] = useState([])
+  const [selectedRepForPerf, setSelectedRepForPerf] = useState(null)
   const [reps, setReps] = useState([])
 
   useEffect(() => { loadProfile() }, [])
@@ -146,8 +148,10 @@ export default function Dashboard({ session }) {
         {selectedProvider && page === 'providers' && <ProviderDetail provider={selectedProvider} tests={tests} clinics={clinics} onBack={() => setSelectedProvider(null)} onSelectClinic={(c) => { setSelectedProvider(null); setSelectedClinic(c); go('accounts') }} />}
         {page === 'providers' && !selectedProvider && <Providers providers={providers} clinics={clinics} tests={tests} onSelect={setSelectedProvider} onSelectClinic={(c) => { setSelectedClinic(c); go('accounts') }} selectedReps={selectedReps} />}
         {page === 'tests' && <Tests tests={tests} clinics={clinics} providers={providers} onSelectClinic={(c) => { setSelectedClinic(c); go('accounts') }} onSelectProvider={(p) => { setSelectedProvider(p); go('providers') }} selectedReps={selectedReps} />}
-        {page === 'reps' && <Reps selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} />}
-        {page === 'managers' && <Managers />}
+        {page === 'reps' && !selectedRepForPerf && <Reps selected={selectedReps} setSelected={setSelectedReps} clinics={clinics} tests={tests} role={role} onSelectRep={setSelectedRepForPerf} />}
+        {page === 'reps' && selectedRepForPerf && <RepPerformance rep={selectedRepForPerf} clinics={clinics} tests={tests} onBack={() => setSelectedRepForPerf(null)} />}
+        {page === 'managers' && !selectedRepForPerf && <Managers onSelectRep={setSelectedRepForPerf} />}
+        {page === 'managers' && selectedRepForPerf && <RepPerformance rep={selectedRepForPerf} clinics={clinics} tests={tests} onBack={() => setSelectedRepForPerf(null)} />}
         {page === 'expenses' && <Expenses expenses={expenses} clinics={clinics} providers={providers} onRefresh={loadData} role={role} session={session} />}
         {page === 'reports' && <Reports clinics={clinics} tests={tests} providers={providers} selectedReps={selectedReps} />}
         {page === 'followups' && <Followups clinics={clinics} session={session} />}

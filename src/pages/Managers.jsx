@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react'
 import { supabase } from '../lib/supabase'
 
-export default function Managers() {
+export default function Managers({ onSelectRep }) {
   const [managers, setManagers] = useState([])
   const [reps, setReps] = useState([])
   const [form, setForm] = useState({ first: '', last: '', phone: '', email: '', address: '' })
@@ -13,22 +13,22 @@ export default function Managers() {
     supabase.from('profiles').select('*').eq('role', 'rep').then(({ data }) => setReps(data || []))
   }, [])
 
-async function createManager() {
-  if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
-  const full_name = form.first.trim() + ' ' + form.last.trim()
-  const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, role: 'manager' }
-  if (editing) payload.id = editing
-  const res = await fetch('/.netlify/functions/create-user', {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(payload)
-  })
-  const data = await res.json()
-  if (!res.ok) return alert(data.error || 'Failed')
-  setForm({ first: '', last: '', phone: '', email: '', address: '' })
-  setEditing(null)
-  supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
-}
+  async function createManager() {
+    if (!form.first.trim() || !form.last.trim() || !form.email.trim()) return alert('First name, last name, and email are required')
+    const full_name = form.first.trim() + ' ' + form.last.trim()
+    const payload = { full_name, phone: form.phone, email: form.email, home_address: form.address, role: 'manager' }
+    if (editing) payload.id = editing
+    const res = await fetch('/.netlify/functions/create-user', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    })
+    const data = await res.json()
+    if (!res.ok) return alert(data.error || 'Failed')
+    setForm({ first: '', last: '', phone: '', email: '', address: '' })
+    setEditing(null)
+    supabase.from('profiles').select('*').eq('role', 'manager').then(({ data }) => setManagers(data || []))
+  }
 
   function startEdit(m) {
     const parts = (m.full_name || '').split(' ')
@@ -54,7 +54,11 @@ async function createManager() {
           return (
             <div key={m.id} style={{ padding: '12px 0', borderBottom: '1px solid #1f2937' }}>
               <div style={{ color: '#14b8a6', fontWeight: 600 }}>{m.full_name || '—'}</div>
-              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 6 }}>Reps: {assigned.length ? assigned.map(r => r.full_name).join(', ') : 'None'}</div>
+              <div style={{ fontSize: 13, color: '#9ca3af', marginBottom: 6 }}>Reps: {assigned.length ? assigned.map(r => (
+                    <span key={r.id} style={{ color: '#14b8a6', cursor: 'pointer', textDecoration: 'underline', marginRight: 8 }} onClick={() => onSelectRep && onSelectRep(r)}>
+                      {r.full_name}
+                    </span>
+                  )) : 'None'}</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 <select value={pickRep} onChange={e => setPickRep(e.target.value)} style={{ background: '#111827', color: '#e5e7eb', border: '1px solid #374151', borderRadius: 6, padding: '6px 8px' }}>
                   <option value="">Assign a rep...</option>
