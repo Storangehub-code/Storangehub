@@ -146,7 +146,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
   function openEdit() {
     setEditForm({
       name: clinic.name || '',
-      clinic_type: clinic.clinic_type || '',
+      type: clinic.type || clinic.clinic_type || '',
       address: clinic.address || '',
       city: clinic.city || '',
       state: clinic.state || '',
@@ -249,8 +249,8 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
         <div className="card">
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
             <div>
-              <p><strong>Type:</strong> {clinic.clinic_type || 'Clinic'}</p>
-              <p><strong>Ordering URL:</strong> {clinic.ordering_url || '—'}</p>
+              <p><strong>Type:</strong> {clinic.type || clinic.clinic_type || 'Clinic'}</p>
+              <p><strong>Pickup URL:</strong> {clinic.ordering_url || '—'}</p>
               <p><strong>Requisition:</strong> {clinic.requisition ? <a href={clinic.requisition} target="_blank" rel="noreferrer" style={{ color: '#14b8a6' }}>View PDF</a> : '—'}</p>
               <p><strong>City:</strong> {clinic.city || '—'}</p>
               <p><strong>Fax:</strong> {clinic.fax || '—'}</p>
@@ -357,16 +357,22 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             ))}
           </div>
           <table style={{ fontSize: 13 }}>
-            <thead><tr><th>Accession</th><th>Collected</th><th>Test</th><th>Provider</th></tr></thead>
+            <thead><tr><th>Accession</th><th>Collected</th><th>Received</th><th>Released</th><th>Test</th><th>Provider</th></tr></thead>
             <tbody>
-              {[...clinicTests].sort((a, b) => (b.collected_at || b.collected || '').localeCompare(a.collected_at || a.collected || '')).slice(0, 25).map(t => (
-                <tr key={t.id}>
-                  <td>{t.accession || '—'}</td>
-                  <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
-                  <td>{t.test_type || '—'}</td>
-                  <td>{t.provider_name || '—'}</td>
-                </tr>
-              ))}
+              {[...clinicTests].sort((a, b) => (b.received_at || b.received || b.collected_at || b.collected || '').localeCompare(a.received_at || a.received || a.collected_at || a.collected || '')).slice(0, 25).map(t => {
+                const prov = clinicProviders.find(p => p.id === t.provider_id)
+                const provName = prov ? formatProviderName(prov) : (t.provider_name || '—')
+                return (
+                  <tr key={t.id}>
+                    <td>{t.accession || '—'}</td>
+                    <td>{formatDate(t.collected_at || t.collected) || '—'}</td>
+                    <td>{formatDate(t.received_at || t.received) || '—'}</td>
+                    <td>{formatDate(t.released_at || t.released || t.finalized_at || t.finalized) || '—'}</td>
+                    <td>{t.test_type || '—'}</td>
+                    <td>{provName}</td>
+                  </tr>
+                )
+              })}
             </tbody>
           </table>
           {clinicTests.length > 25 && <p style={{ color: '#6b7280', marginTop: 12 }}>Showing first 25 of {clinicTests.length}</p>}
@@ -410,7 +416,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
             <h3 style={{ marginBottom: 16 }}>Edit Account</h3>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div style={{ gridColumn: '1 / -1' }}><label>Name *</label><input value={editForm.name} onChange={e => setEditForm({...editForm, name: e.target.value})} /></div>
-              <div><label>Type</label><input value={editForm.clinic_type} onChange={e => setEditForm({...editForm, clinic_type: e.target.value})} /></div>
+              <div><label>Type</label><input value={editForm.type} onChange={e => setEditForm({...editForm, type: e.target.value})} /></div>
               <div><label>EMR</label><input value={editForm.emr} onChange={e => setEditForm({...editForm, emr: e.target.value})} /></div>
               <div style={{ gridColumn: '1 / -1' }}><label>Address</label><input value={editForm.address} onChange={e => setEditForm({...editForm, address: e.target.value})} /></div>
               <div><label>City</label><input value={editForm.city} onChange={e => setEditForm({...editForm, city: e.target.value})} /></div>
@@ -420,7 +426,7 @@ export default function ClinicDetail({ clinic, providers = [], tests = [], onBac
               <div><label>Fax</label><input value={editForm.fax} onChange={e => setEditForm({...editForm, fax: e.target.value})} /></div>
               <div><label>Email</label><input value={editForm.email} onChange={e => setEditForm({...editForm, email: e.target.value})} /></div>
               <div style={{ gridColumn: '1 / -1' }}><label>Office Contact</label><input value={editForm.office_contact} onChange={e => setEditForm({...editForm, office_contact: e.target.value})} /></div>
-              <div><label>Ordering URL</label><input value={editForm.ordering_url} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} /></div>
+              <div><label>Pickup URL</label><input value={editForm.ordering_url} onChange={e => setEditForm({...editForm, ordering_url: e.target.value})} /></div>
               <div><label>Supplies URL</label><input value={editForm.supplies_url} onChange={e => setEditForm({...editForm, supplies_url: e.target.value})} /></div>
               <div style={{ gridColumn: '1 / -1' }}>
                 <label>Requisition (PDF)</label>
