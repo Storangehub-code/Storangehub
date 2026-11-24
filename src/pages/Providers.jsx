@@ -1,10 +1,13 @@
 import { useState } from 'react'
 
 function formatName(name) {
-  if (!name) return '—'
-  const parts = name.split(',').map(p => p.trim())
-  if (parts.length === 3) return parts[0] + ', ' + parts[2] + ', ' + parts[1]
-  return name
+  const raw = (name || '').trim()
+  if (!raw || raw.toLowerCase() === 'unknown') return 'Unknown'
+  const parts = raw.split(',').map(s => s.trim()).filter(s => s && s !== '-' && !/^[-–—]+$/.test(s))
+  if (parts.length >= 3) return parts[0] + ', ' + parts[2] + ', ' + parts[1]
+  if (parts.length === 2) return parts[0] + ', ' + parts[1]
+  if (parts.length === 1) return parts[0]
+  return 'Unknown'
 }
 
 export default function Providers({ providers = [], clinics = [], tests = [], onSelect, onSelectClinic, selectedReps = [] }) {

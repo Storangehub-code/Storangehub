@@ -3,10 +3,13 @@ import { supabase } from '../lib/supabase'
 import { notify, getHigherLevelTargets, sendEmail, GLOBAL_EMAIL } from '../lib/notify'
 
 function formatProviderName(p) {
-  const parts = (p.name || '').split(',').map(s => s.trim())
+  const raw = (p.name || '').trim()
+  if (!raw || raw.toLowerCase() === 'unknown') return 'Unknown'
+  const parts = raw.split(',').map(s => s.trim()).filter(s => s && s !== '-' && !/^[-–—]+$/.test(s))
   if (parts.length >= 3) return `${parts[0]}, ${parts[2]}, ${parts[1]}`
   if (parts.length === 2) return `${parts[0]}, ${parts[1]}`
-  return p.name || 'Unknown'
+  if (parts.length === 1) return parts[0]
+  return 'Unknown'
 }
 
 function calendarLinks(f, clinicName) {
