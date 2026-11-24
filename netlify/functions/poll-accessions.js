@@ -164,11 +164,16 @@ export default async (req) => {
           if (provider) {
             console.log(`Matched provider: ${provider.last_name}, ${provider.first_name}`)
           } else if (row.provider_raw) {
-            // Auto-create missing provider
-            const parts = row.provider_raw.replace(/\b(MD|DO|NP|PA|FNP|APRN|DPM)\b\.?/gi, '').split(',').map(s => s.trim()).filter(Boolean)
-            const last = parts[0] || 'Unknown'
-            const first = parts[1] || 'Unknown'
-            const displayName = `${last}, ${first}`.replace(/, Unknown$/, '')
+            // Auto-create missing provider — skip junk names
+            const cleaned = row.provider_raw.replace(/\b(MD|DO|NP|PA|FNP|APRN|DPM)\b\.?/gi, '').replace(/[-–—]/g, ' ').replace(/\s+/g, ' ').trim()
+            const parts = cleaned.split(',').map(s => s.trim()).filter(Boolean)
+            const last = parts[0] || ''
+            const first = parts[1] || ''
+            const isJunk = !last || last.length < 2 || !first || first.length < 2 || /^[^a-zA-Z]*$/.test(first) || /^[^a-zA-Z]*$/.test(last)
+            if (isJunk) {
+              console.log(`Skipped junk provider name: "${row.provider_raw}"`)
+            } else {
+            const displayName = `${last}, ${first}`
             const { data: newProv, error: createErr } = await supabase.from('providers').insert({
               first_name: first,
               last_name: last,
@@ -194,6 +199,7 @@ export default async (req) => {
                 await supabase.from('notifications').insert(notes)
               }
             }
+            } // end not-junk
           }
 
           // Build record — only include fields that have values so we don't wipe existing dates
